@@ -128,6 +128,8 @@
   .cell.guess-1 { color: #fbbf24; }
   .cell.guess-2 { color: #fb923c; }
   .cell.guess-3 { color: #f87171; }
+  .cell.guess-4 { color: #c084fc; }
+  .cell.guess-5 { color: #22d3ee; }
   .cell.highlight-source { background: #1e3a5f !important; }
   .cell.highlight-target { background: #3b1f1f !important; }
   .cell.highlight-elimination { background: #4a1942 !important; }
@@ -1893,7 +1895,7 @@ function render(step) {
       if (given[i]) {
         cell.classList.add('given');
       } else if (guessDepth[i] > 0) {
-        const d = Math.min(guessDepth[i], 3);
+        const d = Math.min(guessDepth[i], 5);
         cell.classList.add('guess-' + d);
       } else {
         cell.classList.add('solved');
