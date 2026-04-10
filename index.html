@@ -502,6 +502,32 @@
     padding: 6px 0;
   }
   .play-bar button { flex: 1; font-size: 12px; padding: 8px 0; }
+
+  .import-section { flex-shrink: 0; }
+  .import-row {
+    display: flex;
+    gap: 6px;
+  }
+  .import-row input {
+    flex: 1;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: #e2e8f0;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-family: monospace;
+    min-width: 0;
+  }
+  .import-row input:focus {
+    border-color: #38bdf8;
+    outline: none;
+  }
+  .import-row button {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 7px 12px;
+  }
   .hint-box {
     background: #1a1a2e;
     border: 1px solid #fbbf24;
@@ -695,6 +721,14 @@
         <option value="expert">Expert</option>
       </select>
       <button onclick="newGame()" class="primary">랜덤 생성</button>
+    </div>
+
+    <!-- Quick Import -->
+    <div class="import-section">
+      <div class="import-row">
+        <input type="text" id="importStr" placeholder="81자리 붙여넣기 (0 또는 .=빈칸)" spellcheck="false">
+        <button onclick="importFromString()">불러오기</button>
+      </div>
     </div>
 
     <!-- Solver Controls -->
@@ -2067,6 +2101,74 @@ function buildInputGrid() {
     });
     grid.appendChild(inp);
   }
+}
+
+function importFromString() {
+  const raw = document.getElementById('importStr').value.replace(/[^0-9.]/g, '');
+  if (raw.length !== 81) {
+    alert(`81자리가 필요합니다. 현재 ${raw.length}자리입니다.`);
+    return;
+  }
+  const puzzle = [];
+  for (let i = 0; i < 81; i++) {
+    const ch = raw[i];
+    puzzle.push(ch === '.' || ch === '0' ? 0 : parseInt(ch));
+  }
+  // Validate
+  for (let u = 0; u < 9; u++) {
+    for (const type of ['row', 'col', 'box']) {
+      const cells = getUnit(type, u);
+      const seen = new Set();
+      for (const c of cells) {
+        if (puzzle[c] !== 0) {
+          if (seen.has(puzzle[c])) {
+            alert('입력 오류: 같은 행/열/박스에 중복 숫자가 있습니다.');
+            return;
+          }
+          seen.add(puzzle[c]);
+        }
+      }
+    }
+  }
+  // Solve to get solution
+  const solvedCopy = [...puzzle];
+  function bruteSolve(b, pos) {
+    if (pos === 81) return true;
+    if (b[pos] !== 0) return bruteSolve(b, pos + 1);
+    for (let n = 1; n <= 9; n++) {
+      if (canPlace(b, pos, n)) {
+        b[pos] = n;
+        if (bruteSolve(b, pos + 1)) return true;
+        b[pos] = 0;
+      }
+    }
+    return false;
+  }
+  bruteSolve(solvedCopy, 0);
+
+  stopAuto();
+  bifurcationStack = [];
+  board = puzzle;
+  solution = solvedCopy;
+  given = board.map(v => v !== 0);
+  initCandidates();
+  steps = 0;
+
+  if (gameMode === 'play') {
+    initPlayState();
+    renderPlay();
+    startTimer();
+  } else {
+    document.getElementById('log').innerHTML = '';
+    document.getElementById('logCount').textContent = '0 steps';
+    resetTechCounts();
+    render(null);
+    updateStats('-');
+    document.getElementById('statTechnique').textContent = '-';
+  }
+  const filledCount = board.filter(v => v !== 0).length;
+  addLog({ technique: 'Import', cssClass: 't-hidden-single', desc: `문자열 입력 — ${filledCount}칸` });
+  document.getElementById('importStr').value = '';
 }
 
 function loadCustomPuzzle() {
