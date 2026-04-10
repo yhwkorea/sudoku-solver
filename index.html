@@ -2242,7 +2242,8 @@ function renderPlay() {
         const cls = h.type === 'set' ? 'hint-set' : h.type === 'elimination' ? 'hint-elim' : 'hint-source';
         cell.classList.add(cls);
       }
-      if (hintStep.candHighlights) {
+      // candHighlights는 set 셀이 아닌 경우만 적용 (set이 덮어씌워지는 것 방지)
+      if (hintStep.candHighlights && !(h && h.type === 'set')) {
         const ch = hintStep.candHighlights.find(c => c.cell === i);
         if (ch) {
           const cls = ch.type === 'eliminated' ? 'hint-elim' : 'hint-source';
