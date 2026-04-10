@@ -2549,6 +2549,26 @@ function giveHint() {
     if (result) break;
   }
 
+  if (!result) {
+    // 논리 기법 없음 → 가정이 필요한 상황. 후보 가장 적은 셀 추천
+    let bestCell = -1, bestSize = 10;
+    for (let i = 0; i < 81; i++) {
+      if (board[i] === 0 && candidates[i].size >= 2 && candidates[i].size < bestSize) {
+        bestSize = candidates[i].size;
+        bestCell = i;
+      }
+    }
+    if (bestCell >= 0) {
+      const vals = [...candidates[bestCell]].join(', ');
+      result = {
+        technique: 'Bifurcation',
+        desc: `논리만으로는 더 이상 풀 수 없습니다. ${cellName(bestCell)}에서 가정해 보세요 (후보: ${vals}, ${bestSize}개로 가장 적음)`,
+        highlights: [{ cell: bestCell, type: 'set' }],
+        candHighlights: [...candidates[bestCell]].map(v => ({ cell: bestCell, val: v, type: 'highlight' }))
+      };
+    }
+  }
+
   // Restore global state
   board = origBoard;
   candidates = origCands;
@@ -2557,7 +2577,6 @@ function giveHint() {
   if (result) {
     hintStep = result;
     renderPlay();
-    // Show hint in play mode hint box
     const hintBox = document.getElementById('hintBox');
     document.getElementById('hintTech').textContent = result.technique;
     document.getElementById('hintDesc').textContent = result.desc;
