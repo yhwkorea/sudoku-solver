@@ -404,6 +404,84 @@
     padding: 6px 8px;
     font-size: 12px;
   }
+
+  /* ── Mode Toggle ── */
+  .mode-toggle {
+    display: flex;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 0;
+  }
+  .mode-btn:hover { color: #94a3b8; }
+  .mode-btn.active {
+    background: #0369a1;
+    color: #e2e8f0;
+  }
+
+  /* ── Play Mode ── */
+  .cell.selectable { cursor: pointer; }
+  .cell.selected { outline: 3px solid #38bdf8; outline-offset: -3px; z-index: 2; }
+  .cell.peer-hl { background: #162032 !important; }
+  .cell.same-num { background: #1a2744 !important; }
+  .cell.error { color: #ef4444 !important; }
+  .cell.player-filled { color: #4ade80; }
+  .cell.hint-cell {
+    animation: hintPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes hintPulse {
+    0%, 100% { outline: 2px solid transparent; }
+    50% { outline: 2px solid #fbbf24; outline-offset: -2px; }
+  }
+
+  .play-controls { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+  .numpad {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+  }
+  .numpad button {
+    aspect-ratio: 1;
+    font-size: 18px;
+    font-weight: 700;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .numpad button.wide { aspect-ratio: auto; font-size: 12px; font-weight: 600; }
+  .pencil-btn.active {
+    background: #0369a1 !important;
+    border-color: #0284c7 !important;
+    color: #e2e8f0 !important;
+  }
+  .play-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .timer {
+    font-size: 20px;
+    font-weight: 700;
+    color: #38bdf8;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    padding: 6px 0;
+  }
+  .play-bar button { flex: 1; font-size: 12px; padding: 8px 0; }
 </style>
 </head>
 <body>
@@ -563,17 +641,13 @@
   <div class="panel">
     <h1>Sudoku Human Solver</h1>
 
-    <!-- Custom puzzle input -->
-    <div class="input-section">
-      <h3>직접 입력 (1~9, 빈칸은 비워두기)</h3>
-      <div class="input-grid" id="inputGrid"></div>
-      <div class="input-actions">
-        <button onclick="loadCustomPuzzle()">이 퍼즐 풀기</button>
-        <button onclick="clearInputGrid()">지우기</button>
-        <button onclick="copyFromMain()">현재 퍼즐 복사</button>
-      </div>
+    <!-- Mode Toggle -->
+    <div class="mode-toggle">
+      <button class="mode-btn active" onclick="setMode('solver')">Solver</button>
+      <button class="mode-btn" onclick="setMode('play')">Play</button>
     </div>
 
+    <!-- Shared: difficulty + generate -->
     <div class="controls">
       <select id="difficulty">
         <option value="easy">Easy</option>
@@ -584,44 +658,99 @@
       <button onclick="newGame()" class="primary">랜덤 생성</button>
     </div>
 
-    <div class="controls">
-      <button onclick="solveStep()" id="btnStep">Next Step</button>
-      <button onclick="autoSolve()" id="btnAuto">Auto Solve</button>
-      <button onclick="stopAuto()" id="btnStop" disabled>Stop</button>
-      <button onclick="resetPuzzle()">Reset</button>
+    <!-- Solver Controls -->
+    <div id="solverControls">
+      <!-- Custom puzzle input -->
+      <div class="input-section">
+        <h3>직접 입력 (1~9, 빈칸은 비워두기)</h3>
+        <div class="input-grid" id="inputGrid"></div>
+        <div class="input-actions">
+          <button onclick="loadCustomPuzzle()">이 퍼즐 풀기</button>
+          <button onclick="clearInputGrid()">지우기</button>
+          <button onclick="copyFromMain()">현재 퍼즐 복사</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button onclick="solveStep()" id="btnStep">Next Step</button>
+        <button onclick="autoSolve()" id="btnAuto">Auto Solve</button>
+        <button onclick="stopAuto()" id="btnStop" disabled>Stop</button>
+        <button onclick="resetPuzzle()">Reset</button>
+      </div>
+
+      <div class="speed-control">
+        <span>Speed:</span>
+        <input type="range" id="speed" min="50" max="2000" value="500" step="50">
+        <span id="speedLabel">500ms</span>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-value" id="statFilled">0</div>
+          <div class="stat-label">Filled</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="statRemaining">81</div>
+          <div class="stat-label">Remaining</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="statSteps">0</div>
+          <div class="stat-label">Steps</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="statTechnique">-</div>
+          <div class="stat-label">Last Technique</div>
+        </div>
+      </div>
+
+      <div class="log-container">
+        <div class="log-header">
+          <span>Solving Log</span>
+          <span id="logCount">0 steps</span>
+        </div>
+        <div class="log-body" id="log"></div>
+      </div>
     </div>
 
-    <div class="speed-control">
-      <span>Speed:</span>
-      <input type="range" id="speed" min="50" max="2000" value="500" step="50">
-      <span id="speedLabel">500ms</span>
-    </div>
+    <!-- Play Controls -->
+    <div id="playControls" style="display:none;">
+      <div class="timer" id="timer">00:00</div>
+      <div class="play-controls">
+        <div class="numpad" id="numpad">
+          <button onclick="enterNumber(1)">1</button>
+          <button onclick="enterNumber(2)">2</button>
+          <button onclick="enterNumber(3)">3</button>
+          <button onclick="enterNumber(4)">4</button>
+          <button onclick="enterNumber(5)">5</button>
+          <button onclick="enterNumber(6)">6</button>
+          <button onclick="enterNumber(7)">7</button>
+          <button onclick="enterNumber(8)">8</button>
+          <button onclick="enterNumber(9)">9</button>
+          <button onclick="eraseNumber()" class="wide">지우기</button>
+        </div>
+        <div class="play-bar">
+          <button class="pencil-btn" id="pencilBtn" onclick="togglePencil()">메모</button>
+          <button onclick="playUndo()">↩ 되돌리기</button>
+          <button onclick="playRedo()">↪ 다시</button>
+        </div>
+        <button onclick="giveHint()" class="primary" style="width:100%;">💡 힌트</button>
+        <button onclick="resetPlay()" style="width:100%;">Reset</button>
+      </div>
 
-    <div class="stats">
-      <div class="stat">
-        <div class="stat-value" id="statFilled">0</div>
-        <div class="stat-label">Filled</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-value" id="playFilled">0</div>
+          <div class="stat-label">Filled</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="playRemaining">81</div>
+          <div class="stat-label">Remaining</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="playErrors">0</div>
+          <div class="stat-label">Errors</div>
+        </div>
       </div>
-      <div class="stat">
-        <div class="stat-value" id="statRemaining">81</div>
-        <div class="stat-label">Remaining</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value" id="statSteps">0</div>
-        <div class="stat-label">Steps</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value" id="statTechnique">-</div>
-        <div class="stat-label">Last Technique</div>
-      </div>
-    </div>
-
-    <div class="log-container">
-      <div class="log-header">
-        <span>Solving Log</span>
-        <span id="logCount">0 steps</span>
-      </div>
-      <div class="log-body" id="log"></div>
     </div>
   </div>
 </div>
@@ -633,6 +762,7 @@ let given = [];      // true if original clue
 let candidates = []; // Set of possible numbers per cell
 let steps = 0;
 let autoInterval = null;
+let solution = [];   // correct answer for play mode
 
 // ── Utilities ──
 const ROWS = 9, COLS = 9;
@@ -760,7 +890,7 @@ function generateRawPuzzle(removeTarget) {
       puzzle[i] = backup;
     }
   }
-  return puzzle;
+  return { puzzle, solved };
 }
 
 // ── Difficulty Classification ──
@@ -842,23 +972,25 @@ function generatePuzzle(targetDiff) {
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const removeTarget = minRm + Math.floor(Math.random() * (maxRm - minRm + 1));
-    const puzzle = generateRawPuzzle(removeTarget);
-    const level = classifyPuzzle(puzzle);
+    const raw = generateRawPuzzle(removeTarget);
+    const level = classifyPuzzle(raw.puzzle);
 
     if (level === targetDiff) {
-      return { puzzle, level };
+      return { puzzle: raw.puzzle, solved: raw.solved, level };
     }
 
     // Track closest match
     const dist = Math.abs(LEVEL_ORDER[level] - LEVEL_ORDER[targetDiff]);
     if (dist < bestDist) {
       bestDist = dist;
-      bestPuzzle = { puzzle, level };
+      bestPuzzle = { puzzle: raw.puzzle, solved: raw.solved, level };
     }
   }
 
   // Return best match if exact not found
-  return bestPuzzle || { puzzle: generateRawPuzzle(46), level: 'medium' };
+  if (bestPuzzle) return bestPuzzle;
+  const fallback = generateRawPuzzle(46);
+  return { puzzle: fallback.puzzle, solved: fallback.solved, level: 'medium' };
 }
 
 // ── Init Candidates ──
@@ -1788,12 +1920,19 @@ function newGame() {
     const elapsed = Math.round(performance.now() - t0);
 
     board = result.puzzle;
+    solution = result.solved;
     given = board.map(v => v !== 0);
     initCandidates();
     steps = 0;
-    render(null);
-    updateStats('-');
-    document.getElementById('statTechnique').textContent = '-';
+
+    if (gameMode === 'play') {
+      initPlayState();
+      renderPlay();
+    } else {
+      render(null);
+      updateStats('-');
+      document.getElementById('statTechnique').textContent = '-';
+    }
 
     const givens = board.filter(v => v !== 0).length;
     const matchNote = result.level === diff ? '' : ` (closest: ${result.level.toUpperCase()})`;
@@ -1926,6 +2065,307 @@ function copyFromMain() {
     grid.children[i].value = given[i] ? board[i] : '';
   }
 }
+
+// ── Play Mode State ──
+let gameMode = 'solver';  // 'solver' or 'play'
+let selectedCell = -1;
+let pencilMode = false;
+let playerBoard = [];     // player's filled numbers (0 = empty)
+let playerCands = [];     // player's pencil marks (Set per cell)
+let undoStack = [];
+let redoStack = [];
+let timerInterval = null;
+let timerSeconds = 0;
+let hintStep = null;      // current hint highlight
+
+function setMode(mode) {
+  gameMode = mode;
+  document.querySelectorAll('.mode-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', (i === 0 && mode === 'solver') || (i === 1 && mode === 'play'));
+  });
+  document.getElementById('solverControls').style.display = mode === 'solver' ? '' : 'none';
+  document.getElementById('playControls').style.display = mode === 'play' ? '' : 'none';
+
+  if (mode === 'play') {
+    stopAuto();
+    initPlayState();
+    renderPlay();
+    startTimer();
+  } else {
+    stopTimer();
+    selectedCell = -1;
+    hintStep = null;
+    // Restore solver board from given clues
+    for (let i = 0; i < 81; i++) {
+      if (!given[i]) board[i] = 0;
+    }
+    initCandidates();
+    render(null);
+  }
+}
+
+function initPlayState() {
+  playerBoard = Array(81).fill(0);
+  playerCands = Array.from({ length: 81 }, () => new Set());
+  for (let i = 0; i < 81; i++) {
+    if (given[i]) playerBoard[i] = board[i];
+  }
+  undoStack = [];
+  redoStack = [];
+  selectedCell = -1;
+  pencilMode = false;
+  hintStep = null;
+  document.getElementById('pencilBtn').classList.remove('active');
+  timerSeconds = 0;
+  updateTimerDisplay();
+  updatePlayStats();
+}
+
+// ── Timer ──
+function startTimer() {
+  stopTimer();
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    updateTimerDisplay();
+  }, 1000);
+}
+function stopTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+function updateTimerDisplay() {
+  const m = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+  const s = String(timerSeconds % 60).padStart(2, '0');
+  document.getElementById('timer').textContent = `${m}:${s}`;
+}
+
+// ── Play Render ──
+function renderPlay() {
+  const gridEl = document.getElementById('grid');
+  gridEl.innerHTML = '';
+  const peerSet = selectedCell >= 0 ? new Set(peers(selectedCell)) : new Set();
+  const selectedNum = selectedCell >= 0 ? playerBoard[selectedCell] : 0;
+
+  for (let i = 0; i < 81; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell selectable';
+    if (i === selectedCell) cell.classList.add('selected');
+    if (peerSet.has(i)) cell.classList.add('peer-hl');
+
+    if (playerBoard[i] !== 0) {
+      cell.textContent = playerBoard[i];
+      if (given[i]) {
+        cell.classList.add('given');
+      } else {
+        cell.classList.add('player-filled');
+        // Error check against solution
+        if (solution.length && playerBoard[i] !== solution[i]) {
+          cell.classList.add('error');
+        }
+      }
+      if (selectedNum && playerBoard[i] === selectedNum) cell.classList.add('same-num');
+    } else {
+      // Show pencil marks
+      if (playerCands[i].size > 0) {
+        const candDiv = document.createElement('div');
+        candDiv.className = 'candidates';
+        for (let n = 1; n <= 9; n++) {
+          const c = document.createElement('div');
+          c.className = 'cand';
+          if (playerCands[i].has(n)) c.textContent = n;
+          candDiv.appendChild(c);
+        }
+        cell.appendChild(candDiv);
+      }
+    }
+
+    // Hint highlight
+    if (hintStep) {
+      const h = hintStep.highlights.find(h => h.cell === i);
+      if (h) cell.classList.add('hint-cell');
+      if (hintStep.candHighlights) {
+        // Also highlight candidate-level hints in pencil marks
+        const ch = hintStep.candHighlights.find(c => c.cell === i);
+        if (ch) cell.classList.add('hint-cell');
+      }
+    }
+
+    cell.addEventListener('click', () => selectCell(i));
+    gridEl.appendChild(cell);
+  }
+
+  // Progress
+  const filled = playerBoard.filter(v => v !== 0).length;
+  document.getElementById('progress').style.width = (filled / 81 * 100) + '%';
+  updatePlayStats();
+}
+
+function updatePlayStats() {
+  const filled = playerBoard.filter(v => v !== 0).length;
+  const errors = playerBoard.filter((v, i) => v !== 0 && !given[i] && solution.length && v !== solution[i]).length;
+  document.getElementById('playFilled').textContent = filled;
+  document.getElementById('playRemaining').textContent = 81 - filled;
+  document.getElementById('playErrors').textContent = errors;
+}
+
+function selectCell(i) {
+  hintStep = null;
+  selectedCell = (selectedCell === i) ? -1 : i;
+  renderPlay();
+}
+
+function pushUndo() {
+  undoStack.push({
+    board: [...playerBoard],
+    cands: playerCands.map(s => new Set(s))
+  });
+  redoStack = [];
+}
+
+function enterNumber(n) {
+  if (selectedCell < 0 || given[selectedCell]) return;
+  pushUndo();
+  hintStep = null;
+  if (pencilMode) {
+    playerBoard[selectedCell] = 0;
+    if (playerCands[selectedCell].has(n)) {
+      playerCands[selectedCell].delete(n);
+    } else {
+      playerCands[selectedCell].add(n);
+    }
+  } else {
+    playerCands[selectedCell].clear();
+    playerBoard[selectedCell] = (playerBoard[selectedCell] === n) ? 0 : n;
+    // Auto-remove this number from peer pencil marks
+    if (playerBoard[selectedCell] !== 0) {
+      for (const p of peers(selectedCell)) {
+        playerCands[p].delete(n);
+      }
+    }
+  }
+  renderPlay();
+  checkCompletion();
+}
+
+function eraseNumber() {
+  if (selectedCell < 0 || given[selectedCell]) return;
+  pushUndo();
+  hintStep = null;
+  playerBoard[selectedCell] = 0;
+  playerCands[selectedCell].clear();
+  renderPlay();
+}
+
+function togglePencil() {
+  pencilMode = !pencilMode;
+  document.getElementById('pencilBtn').classList.toggle('active', pencilMode);
+}
+
+function playUndo() {
+  if (undoStack.length === 0) return;
+  redoStack.push({
+    board: [...playerBoard],
+    cands: playerCands.map(s => new Set(s))
+  });
+  const state = undoStack.pop();
+  playerBoard = state.board;
+  playerCands = state.cands;
+  hintStep = null;
+  renderPlay();
+}
+
+function playRedo() {
+  if (redoStack.length === 0) return;
+  undoStack.push({
+    board: [...playerBoard],
+    cands: playerCands.map(s => new Set(s))
+  });
+  const state = redoStack.pop();
+  playerBoard = state.board;
+  playerCands = state.cands;
+  hintStep = null;
+  renderPlay();
+}
+
+function resetPlay() {
+  initPlayState();
+  startTimer();
+  renderPlay();
+}
+
+function checkCompletion() {
+  if (playerBoard.some(v => v === 0)) return;
+  // Check all correct
+  if (solution.length && playerBoard.every((v, i) => v === solution[i])) {
+    stopTimer();
+    const m = Math.floor(timerSeconds / 60);
+    const s = timerSeconds % 60;
+    setTimeout(() => alert(`축하합니다! ${m}분 ${s}초에 완료했습니다!`), 100);
+  }
+}
+
+// ── Hint ──
+function giveHint() {
+  // Build a temporary board state from player's current progress
+  const testBoard = [...playerBoard];
+  const testCands = Array.from({ length: 81 }, () => new Set());
+  for (let i = 0; i < 81; i++) {
+    if (testBoard[i] !== 0) continue;
+    for (let n = 1; n <= 9; n++) {
+      if (canPlace(testBoard, i, n)) testCands[i].add(n);
+    }
+  }
+
+  // Temporarily swap global state
+  const origBoard = board, origCands = candidates, origBifStack = bifurcationStack;
+  board = testBoard;
+  candidates = testCands;
+  bifurcationStack = [];
+
+  let result = null;
+  for (const fn of techniques) {
+    result = fn();
+    if (result) break;
+  }
+
+  // Restore global state
+  board = origBoard;
+  candidates = origCands;
+  bifurcationStack = origBifStack;
+
+  if (result) {
+    hintStep = result;
+    renderPlay();
+    // Show hint description in a subtle way
+    const desc = `💡 ${result.technique}: ${result.desc}`;
+    addLog({ technique: 'Hint', cssClass: 't-hidden-single', desc });
+  } else {
+    alert('힌트를 찾을 수 없습니다. 입력한 숫자를 확인해 보세요.');
+  }
+}
+
+// ── Keyboard Input for Play Mode ──
+document.addEventListener('keydown', (e) => {
+  if (gameMode !== 'play' || selectedCell < 0) return;
+  const key = e.key;
+  if (key >= '1' && key <= '9') {
+    enterNumber(parseInt(key));
+    e.preventDefault();
+  } else if (key === 'Backspace' || key === 'Delete') {
+    eraseNumber();
+    e.preventDefault();
+  } else if (key === 'p' || key === 'P') {
+    togglePencil();
+    e.preventDefault();
+  } else if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight') {
+    e.preventDefault();
+    let r = row(selectedCell), c = col(selectedCell);
+    if (key === 'ArrowUp' && r > 0) r--;
+    if (key === 'ArrowDown' && r < 8) r++;
+    if (key === 'ArrowLeft' && c > 0) c--;
+    if (key === 'ArrowRight' && c < 8) c++;
+    selectCell(idx(r, c));
+  }
+});
 
 // ── Init ──
 buildInputGrid();
