@@ -129,7 +129,30 @@
   .cell.guess-2 { color: #fb923c; }
   .cell.guess-3 { color: #f87171; }
   .cell.guess-4 { color: #c084fc; }
-  .cell.guess-5 { color: #22d3ee; }
+  .cell.guess-5 { color: #4ade80; }
+
+  .guess-legend {
+    display: none;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 8px 12px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  .guess-legend.visible { display: flex; }
+  .guess-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .guess-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
   .cell.highlight-source { background: #1e3a5f !important; }
   .cell.highlight-target { background: #3b1f1f !important; }
   .cell.highlight-elimination { background: #4a1942 !important; }
@@ -776,6 +799,14 @@
           <div class="stat-value" id="statTechnique">-</div>
           <div class="stat-label">Last Technique</div>
         </div>
+      </div>
+
+      <div class="guess-legend" id="guessLegend">
+        <div class="guess-legend-item"><div class="guess-legend-dot" style="background:#fbbf24"></div><span>가정 1</span></div>
+        <div class="guess-legend-item"><div class="guess-legend-dot" style="background:#fb923c"></div><span>가정 2</span></div>
+        <div class="guess-legend-item"><div class="guess-legend-dot" style="background:#f87171"></div><span>가정 3</span></div>
+        <div class="guess-legend-item"><div class="guess-legend-dot" style="background:#c084fc"></div><span>가정 4</span></div>
+        <div class="guess-legend-item"><div class="guess-legend-dot" style="background:#4ade80"></div><span>가정 5</span></div>
       </div>
 
       <div class="log-container">
@@ -1976,6 +2007,21 @@ function updateStats(technique) {
       card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }
+  updateGuessLegend();
+}
+
+function updateGuessLegend() {
+  const maxD = Math.max(0, ...guessDepth);
+  const legend = document.getElementById('guessLegend');
+  if (maxD === 0) {
+    legend.classList.remove('visible');
+    return;
+  }
+  legend.classList.add('visible');
+  const items = legend.children;
+  for (let i = 0; i < items.length; i++) {
+    items[i].style.display = (i < maxD) ? '' : 'none';
+  }
 }
 
 function resetTechCounts() {
@@ -1986,6 +2032,7 @@ function resetTechCounts() {
     if (el) el.textContent = '0';
   });
   document.querySelectorAll('.tech-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('guessLegend').classList.remove('visible');
 }
 
 function toggleTech(el) {
