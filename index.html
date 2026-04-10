@@ -191,6 +191,10 @@
   .t-x-wing { border-left-color: #ef4444; }
   .t-xy-wing .technique { color: #fbbf24; }
   .t-xy-wing { border-left-color: #fbbf24; }
+  .t-swordfish .technique { color: #ff6b6b; }
+  .t-swordfish { border-left-color: #ff6b6b; }
+  .t-bifurcation .technique { color: #94a3b8; }
+  .t-bifurcation { border-left-color: #94a3b8; }
 
   /* Stats */
   .stats {
@@ -944,6 +948,206 @@ function findXYWing() {
   return null;
 }
 
+// ── Swordfish ──
+function findSwordfish() {
+  for (let n = 1; n <= 9; n++) {
+    // Row-based Swordfish
+    const rowPositions = [];
+    for (let r = 0; r < 9; r++) {
+      const cols = [];
+      for (let c = 0; c < 9; c++) {
+        const i = idx(r, c);
+        if (board[i] === 0 && candidates[i].has(n)) cols.push(c);
+      }
+      if (cols.length >= 2 && cols.length <= 3) rowPositions.push({ row: r, cols });
+    }
+    if (rowPositions.length >= 3) {
+      for (let a = 0; a < rowPositions.length; a++)
+        for (let b = a + 1; b < rowPositions.length; b++)
+          for (let c = b + 1; c < rowPositions.length; c++) {
+            const unionCols = new Set([...rowPositions[a].cols, ...rowPositions[b].cols, ...rowPositions[c].cols]);
+            if (unionCols.size !== 3) continue;
+            const sfRows = [rowPositions[a].row, rowPositions[b].row, rowPositions[c].row];
+            const sfCols = [...unionCols];
+            const sourceCells = [];
+            for (const r of sfRows)
+              for (const cc of sfCols) {
+                const i = idx(r, cc);
+                if (board[i] === 0 && candidates[i].has(n)) sourceCells.push(i);
+              }
+            const eliminations = [];
+            for (const cc of sfCols) {
+              for (let r = 0; r < 9; r++) {
+                if (sfRows.includes(r)) continue;
+                const i = idx(r, cc);
+                if (board[i] === 0 && candidates[i].has(n))
+                  eliminations.push({ cell: i, val: n });
+              }
+            }
+            if (eliminations.length > 0) {
+              return {
+                technique: 'Swordfish',
+                cssClass: 't-swordfish',
+                desc: `${n} Swordfish R${sfRows.map(r=>r+1).join(',R')} × C${sfCols.map(c=>c+1).join(',C')}`,
+                highlights: [
+                  ...sourceCells.map(c => ({ cell: c, type: 'source' })),
+                  ...eliminations.map(e => ({ cell: e.cell, type: 'elimination' }))
+                ],
+                candHighlights: [
+                  ...sourceCells.map(c => ({ cell: c, val: n, type: 'highlight' })),
+                  ...eliminations.map(e => ({ cell: e.cell, val: e.val, type: 'eliminated' }))
+                ],
+                action: () => eliminations.forEach(e => candidates[e.cell].delete(e.val))
+              };
+            }
+          }
+    }
+    // Column-based Swordfish
+    const colPositions = [];
+    for (let c = 0; c < 9; c++) {
+      const rows = [];
+      for (let r = 0; r < 9; r++) {
+        const i = idx(r, c);
+        if (board[i] === 0 && candidates[i].has(n)) rows.push(r);
+      }
+      if (rows.length >= 2 && rows.length <= 3) colPositions.push({ col: c, rows });
+    }
+    if (colPositions.length >= 3) {
+      for (let a = 0; a < colPositions.length; a++)
+        for (let b = a + 1; b < colPositions.length; b++)
+          for (let c = b + 1; c < colPositions.length; c++) {
+            const unionRows = new Set([...colPositions[a].rows, ...colPositions[b].rows, ...colPositions[c].rows]);
+            if (unionRows.size !== 3) continue;
+            const sfCols = [colPositions[a].col, colPositions[b].col, colPositions[c].col];
+            const sfRows = [...unionRows];
+            const sourceCells = [];
+            for (const r of sfRows)
+              for (const cc of sfCols) {
+                const i = idx(r, cc);
+                if (board[i] === 0 && candidates[i].has(n)) sourceCells.push(i);
+              }
+            const eliminations = [];
+            for (const r of sfRows) {
+              for (let cc = 0; cc < 9; cc++) {
+                if (sfCols.includes(cc)) continue;
+                const i = idx(r, cc);
+                if (board[i] === 0 && candidates[i].has(n))
+                  eliminations.push({ cell: i, val: n });
+              }
+            }
+            if (eliminations.length > 0) {
+              return {
+                technique: 'Swordfish',
+                cssClass: 't-swordfish',
+                desc: `${n} Swordfish C${sfCols.map(c=>c+1).join(',C')} × R${sfRows.map(r=>r+1).join(',R')}`,
+                highlights: [
+                  ...sourceCells.map(c => ({ cell: c, type: 'source' })),
+                  ...eliminations.map(e => ({ cell: e.cell, type: 'elimination' }))
+                ],
+                candHighlights: [
+                  ...sourceCells.map(c => ({ cell: c, val: n, type: 'highlight' })),
+                  ...eliminations.map(e => ({ cell: e.cell, val: e.val, type: 'eliminated' }))
+                ],
+                action: () => eliminations.forEach(e => candidates[e.cell].delete(e.val))
+              };
+            }
+          }
+    }
+  }
+  return null;
+}
+
+// ── Bifurcation (Trial & Error) ──
+let bifurcationStack = [];
+
+function findBifurcation() {
+  // Pick cell with fewest candidates (MRV heuristic)
+  let bestCell = -1, bestSize = 10;
+  for (let i = 0; i < 81; i++) {
+    if (board[i] === 0 && candidates[i].size >= 2 && candidates[i].size < bestSize) {
+      bestSize = candidates[i].size;
+      bestCell = i;
+    }
+  }
+  if (bestCell === -1) return null;
+
+  const tryVal = [...candidates[bestCell]][0];
+  // Save full state for backtracking
+  const snapshot = {
+    board: [...board],
+    candidates: candidates.map(s => new Set(s)),
+    cell: bestCell,
+    triedVal: tryVal,
+    remainingVals: [...candidates[bestCell]].slice(1)
+  };
+  bifurcationStack.push(snapshot);
+
+  return {
+    technique: 'Bifurcation',
+    cssClass: 't-bifurcation',
+    desc: `Guessing ${cellName(bestCell)} = ${tryVal} (${bestSize} candidates). Will backtrack if contradiction found.`,
+    highlights: [{ cell: bestCell, type: 'set' }],
+    candHighlights: [{ cell: bestCell, val: tryVal, type: 'highlight' }],
+    action: () => setValue(bestCell, tryVal)
+  };
+}
+
+function checkContradiction() {
+  for (let i = 0; i < 81; i++) {
+    if (board[i] === 0 && candidates[i].size === 0) return true;
+  }
+  // Check units for duplicate placed values
+  for (const unit of allUnits()) {
+    const seen = new Set();
+    for (const c of unit.cells) {
+      if (board[c] !== 0) {
+        if (seen.has(board[c])) return true;
+        seen.add(board[c]);
+      }
+    }
+    // Check if any unplaced number has no candidate cell
+    for (let n = 1; n <= 9; n++) {
+      const placed = unit.cells.some(c => board[c] === n);
+      if (placed) continue;
+      const canGo = unit.cells.some(c => board[c] === 0 && candidates[c].has(n));
+      if (!canGo) return true;
+    }
+  }
+  return false;
+}
+
+function backtrack() {
+  while (bifurcationStack.length > 0) {
+    const snapshot = bifurcationStack.pop();
+    if (snapshot.remainingVals.length > 0) {
+      // Restore state
+      board = snapshot.board;
+      candidates = snapshot.candidates;
+      const nextVal = snapshot.remainingVals[0];
+      const newSnapshot = {
+        board: [...board],
+        candidates: candidates.map(s => new Set(s)),
+        cell: snapshot.cell,
+        triedVal: nextVal,
+        remainingVals: snapshot.remainingVals.slice(1)
+      };
+      bifurcationStack.push(newSnapshot);
+      setValue(snapshot.cell, nextVal);
+      return {
+        technique: 'Bifurcation',
+        cssClass: 't-bifurcation',
+        desc: `Contradiction! Backtracking. Now trying ${cellName(snapshot.cell)} = ${nextVal}`,
+        highlights: [{ cell: snapshot.cell, type: 'set' }],
+        candHighlights: [{ cell: snapshot.cell, val: nextVal, type: 'highlight' }],
+      };
+    }
+    // All values exhausted at this level, restore and continue popping
+    board = snapshot.board;
+    candidates = snapshot.candidates;
+  }
+  return null;
+}
+
 // ── Solver Engine ──
 const techniques = [
   findNakedSingle,
@@ -956,9 +1160,25 @@ const techniques = [
   findHiddenTriple,
   findXWing,
   findXYWing,
+  findSwordfish,
 ];
 
 function solveStep() {
+  // Check for contradiction from bifurcation
+  if (bifurcationStack.length > 0 && checkContradiction()) {
+    const result = backtrack();
+    if (result) {
+      steps++;
+      addLog(result);
+      render(result);
+      updateStats(result.technique);
+      return true;
+    }
+    addLog({ technique: 'Error', cssClass: 't-x-wing', desc: 'Contradiction with no backtrack path — puzzle may be invalid' });
+    stopAuto();
+    return false;
+  }
+
   for (const fn of techniques) {
     const result = fn();
     if (result) {
@@ -974,7 +1194,19 @@ function solveStep() {
       return true;
     }
   }
-  addLog({ technique: 'Stuck', cssClass: 't-x-wing', desc: 'No human technique found — puzzle requires guessing or more advanced techniques' });
+
+  // All logical techniques exhausted — use bifurcation
+  const result = findBifurcation();
+  if (result) {
+    result.action();
+    steps++;
+    addLog(result);
+    render(result);
+    updateStats(result.technique);
+    return true;
+  }
+
+  addLog({ technique: 'Stuck', cssClass: 't-x-wing', desc: 'Cannot solve — no candidates left to try' });
   stopAuto();
   return false;
 }
@@ -1068,7 +1300,8 @@ function updateStats(technique) {
     'Naked Pair': 'NP', 'Hidden Pair': 'HP',
     'Naked Triple': 'NT', 'Hidden Triple': 'HT',
     'Pointing Pair': 'PP', 'Box/Line Reduction': 'BL',
-    'X-Wing': 'XW', 'XY-Wing': 'XY'
+    'X-Wing': 'XW', 'XY-Wing': 'XY',
+    'Swordfish': 'SF', 'Bifurcation': 'BF'
   };
   document.getElementById('statTechnique').textContent = shortNames[technique] || technique;
 }
@@ -1076,6 +1309,7 @@ function updateStats(technique) {
 // ── Game Control ──
 function newGame() {
   stopAuto();
+  bifurcationStack = [];
   const diff = document.getElementById('difficulty').value;
   board = generatePuzzle(diff);
   given = board.map(v => v !== 0);
@@ -1091,6 +1325,7 @@ function newGame() {
 
 function resetPuzzle() {
   stopAuto();
+  bifurcationStack = [];
   for (let i = 0; i < 81; i++) {
     if (!given[i]) board[i] = 0;
   }
