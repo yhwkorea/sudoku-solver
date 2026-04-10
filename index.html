@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sudoku Human Solver</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+  }
+  .app {
+    max-width: 1100px;
+    width: 100%;
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* Grid */
+  .grid-container { position: relative; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 1px;
+    background: #475569;
+    border: 3px solid #94a3b8;
+    width: 504px;
+    height: 504px;
+  }
+  .cell {
+    background: #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 700;
+    position: relative;
+    cursor: default;
+    transition: background 0.3s;
+  }
+  .cell.given { color: #94a3b8; }
+  .cell.solved { color: #38bdf8; }
+  .cell.highlight-source { background: #1e3a5f !important; }
+  .cell.highlight-target { background: #3b1f1f !important; }
+  .cell.highlight-elimination { background: #4a1942 !important; }
+  .cell.highlight-set { background: #1a3a2a !important; }
+
+  /* Thick box borders */
+  .cell:nth-child(3n) { border-right: 2px solid #94a3b8; }
+  .cell:nth-child(9n) { border-right: none; }
+  .cell:nth-child(n+19):nth-child(-n+27) { border-bottom: 2px solid #94a3b8; }
+  .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid #94a3b8; }
+
+  /* Candidates */
+  .candidates {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0; left: 0;
+  }
+  .cand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #64748b;
+    transition: color 0.3s, font-weight 0.3s;
+  }
+  .cand.highlight { color: #fbbf24; font-weight: 700; }
+  .cand.eliminated { color: #ef4444; font-weight: 700; text-decoration: line-through; }
+
+  /* Panel */
+  .panel {
+    flex: 1;
+    min-width: 300px;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  h1 {
+    font-size: 24px;
+    color: #38bdf8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  button {
+    padding: 8px 16px;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    background: #1e293b;
+    color: #e2e8f0;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  button:hover { background: #334155; border-color: #38bdf8; }
+  button:active { transform: scale(0.97); }
+  button.primary { background: #0369a1; border-color: #0284c7; }
+  button.primary:hover { background: #0284c7; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .speed-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #94a3b8;
+  }
+  .speed-control input { width: 100px; }
+
+  /* Log */
+  .log-container {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .log-header {
+    padding: 12px 16px;
+    background: #334155;
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .log-body {
+    padding: 8px;
+    overflow-y: auto;
+    max-height: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .log-entry {
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    border-left: 3px solid transparent;
+    transition: background 0.2s;
+  }
+  .log-entry:hover { background: #334155; }
+  .log-entry .technique {
+    font-weight: 700;
+    display: inline-block;
+    margin-right: 6px;
+  }
+  .log-entry .detail { color: #94a3b8; }
+
+  /* Technique colors */
+  .t-naked-single .technique { color: #4ade80; }
+  .t-naked-single { border-left-color: #4ade80; }
+  .t-hidden-single .technique { color: #38bdf8; }
+  .t-hidden-single { border-left-color: #38bdf8; }
+  .t-naked-pair .technique { color: #fb923c; }
+  .t-naked-pair { border-left-color: #fb923c; }
+  .t-naked-triple .technique { color: #f97316; }
+  .t-naked-triple { border-left-color: #f97316; }
+  .t-hidden-pair .technique { color: #a78bfa; }
+  .t-hidden-pair { border-left-color: #a78bfa; }
+  .t-hidden-triple .technique { color: #8b5cf6; }
+  .t-hidden-triple { border-left-color: #8b5cf6; }
+  .t-pointing .technique { color: #f472b6; }
+  .t-pointing { border-left-color: #f472b6; }
+  .t-box-line .technique { color: #e879f9; }
+  .t-box-line { border-left-color: #e879f9; }
+  .t-x-wing .technique { color: #ef4444; }
+  .t-x-wing { border-left-color: #ef4444; }
+  .t-xy-wing .technique { color: #fbbf24; }
+  .t-xy-wing { border-left-color: #fbbf24; }
+
+  /* Stats */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .stat {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 10px 14px;
+    text-align: center;
+  }
+  .stat-value { font-size: 22px; font-weight: 700; color: #38bdf8; }
+  .stat-label { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+  /* Difficulty selector */
+  select {
+    padding: 8px 12px;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    background: #1e293b;
+    color: #e2e8f0;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .progress-bar {
+    height: 4px;
+    background: #334155;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #38bdf8, #4ade80);
+    transition: width 0.3s;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="grid-container">
+    <div class="grid" id="grid"></div>
+    <div class="progress-bar" style="margin-top:8px">
+      <div class="progress-fill" id="progress" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h1>Sudoku Human Solver</h1>
+
+    <div class="controls">
+      <select id="difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+        <option value="expert">Expert</option>
+      </select>
+      <button onclick="newGame()" class="primary">New Puzzle</button>
+    </div>
+
+    <div class="controls">
+      <button onclick="solveStep()" id="btnStep">Next Step</button>
+      <button onclick="autoSolve()" id="btnAuto">Auto Solve</button>
+      <button onclick="stopAuto()" id="btnStop" disabled>Stop</button>
+      <button onclick="resetPuzzle()">Reset</button>
+    </div>
+
+    <div class="speed-control">
+      <span>Speed:</span>
+      <input type="range" id="speed" min="50" max="2000" value="500" step="50">
+      <span id="speedLabel">500ms</span>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="statFilled">0</div>
+        <div class="stat-label">Filled</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="statRemaining">81</div>
+        <div class="stat-label">Remaining</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="statSteps">0</div>
+        <div class="stat-label">Steps</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="statTechnique">-</div>
+        <div class="stat-label">Last Technique</div>
+      </div>
+    </div>
+
+    <div class="log-container">
+      <div class="log-header">
+        <span>Solving Log</span>
+        <span id="logCount">0 steps</span>
+      </div>
+      <div class="log-body" id="log"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let board = [];      // 0 = empty
+let given = [];      // true if original clue
+let candidates = []; // Set of possible numbers per cell
+let steps = 0;
+let autoInterval = null;
+
+// ── Utilities ──
+const ROWS = 9, COLS = 9;
+const idx = (r, c) => r * 9 + c;
+const row = i => Math.floor(i / 9);
+const col = i => i % 9;
+const box = i => Math.floor(row(i) / 3) * 3 + Math.floor(col(i) / 3);
+const boxStart = b => [Math.floor(b / 3) * 3, (b % 3) * 3];
+
+function peers(i) {
+  const r = row(i), c = col(i);
+  const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
+  const s = new Set();
+  for (let k = 0; k < 9; k++) {
+    s.add(idx(r, k));
+    s.add(idx(k, c));
+  }
+  for (let dr = 0; dr < 3; dr++)
+    for (let dc = 0; dc < 3; dc++)
+      s.add(idx(br + dr, bc + dc));
+  s.delete(i);
+  return [...s];
+}
+
+function getUnit(type, index) {
+  const cells = [];
+  if (type === 'row') {
+    for (let c = 0; c < 9; c++) cells.push(idx(index, c));
+  } else if (type === 'col') {
+    for (let r = 0; r < 9; r++) cells.push(idx(r, index));
+  } else {
+    const [br, bc] = boxStart(index);
+    for (let dr = 0; dr < 3; dr++)
+      for (let dc = 0; dc < 3; dc++)
+        cells.push(idx(br + dr, bc + dc));
+  }
+  return cells;
+}
+
+function allUnits() {
+  const units = [];
+  for (let i = 0; i < 9; i++) {
+    units.push({ type: 'row', index: i, cells: getUnit('row', i) });
+    units.push({ type: 'col', index: i, cells: getUnit('col', i) });
+    units.push({ type: 'box', index: i, cells: getUnit('box', i) });
+  }
+  return units;
+}
+
+const unitName = (type, index) => {
+  if (type === 'row') return `R${index + 1}`;
+  if (type === 'col') return `C${index + 1}`;
+  return `Box${index + 1}`;
+};
+const cellName = i => `R${row(i) + 1}C${col(i) + 1}`;
+
+// ── Puzzle Generation ──
+function generateSolved() {
+  const b = Array(81).fill(0);
+  function solve(pos) {
+    if (pos === 81) return true;
+    const nums = [1,2,3,4,5,6,7,8,9];
+    shuffle(nums);
+    for (const n of nums) {
+      if (canPlace(b, pos, n)) {
+        b[pos] = n;
+        if (solve(pos + 1)) return true;
+        b[pos] = 0;
+      }
+    }
+    return false;
+  }
+  solve(0);
+  return b;
+}
+
+function canPlace(b, i, n) {
+  const r = row(i), c = col(i);
+  for (let k = 0; k < 9; k++) {
+    if (b[idx(r, k)] === n) return false;
+    if (b[idx(k, c)] === n) return false;
+  }
+  const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
+  for (let dr = 0; dr < 3; dr++)
+    for (let dc = 0; dc < 3; dc++)
+      if (b[idx(br + dr, bc + dc)] === n) return false;
+  return true;
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function generatePuzzle(diff) {
+  const solved = generateSolved();
+  const puzzle = [...solved];
+  const removeCounts = { easy: 36, medium: 46, hard: 52, expert: 56 };
+  const toRemove = removeCounts[diff] || 46;
+  const indices = Array.from({ length: 81 }, (_, i) => i);
+  shuffle(indices);
+  let removed = 0;
+  for (const i of indices) {
+    if (removed >= toRemove) break;
+    const backup = puzzle[i];
+    puzzle[i] = 0;
+    // Check unique solution
+    let count = 0;
+    const temp = [...puzzle];
+    function countSolutions(pos) {
+      if (count > 1) return;
+      if (pos === 81) { count++; return; }
+      if (temp[pos] !== 0) { countSolutions(pos + 1); return; }
+      for (let n = 1; n <= 9; n++) {
+        if (canPlace(temp, pos, n)) {
+          temp[pos] = n;
+          countSolutions(pos + 1);
+          temp[pos] = 0;
+        }
+      }
+    }
+    countSolutions(0);
+    if (count === 1) {
+      removed++;
+    } else {
+      puzzle[i] = backup;
+    }
+  }
+  return puzzle;
+}
+
+// ── Init Candidates ──
+function initCandidates() {
+  candidates = Array.from({ length: 81 }, () => new Set());
+  for (let i = 0; i < 81; i++) {
+    if (board[i] !== 0) continue;
+    for (let n = 1; n <= 9; n++) {
+      if (canPlace(board, i, n)) candidates[i].add(n);
+    }
+  }
+}
+
+function setValue(i, val) {
+  board[i] = val;
+  candidates[i].clear();
+  for (const p of peers(i)) {
+    candidates[p].delete(val);
+  }
+}
+
+// ── Solving Techniques ──
+
+function findNakedSingle() {
+  for (let i = 0; i < 81; i++) {
+    if (board[i] === 0 && candidates[i].size === 1) {
+      const val = [...candidates[i]][0];
+      return {
+        technique: 'Naked Single',
+        cssClass: 't-naked-single',
+        desc: `${cellName(i)} has only one candidate: ${val}`,
+        highlights: [{ cell: i, type: 'set' }],
+        candHighlights: [{ cell: i, val, type: 'highlight' }],
+        action: () => setValue(i, val)
+      };
+    }
+  }
+  return null;
+}
+
+function findHiddenSingle() {
+  for (const unit of allUnits()) {
+    for (let n = 1; n <= 9; n++) {
+      const places = unit.cells.filter(i => board[i] === 0 && candidates[i].has(n));
+      if (places.length === 1) {
+        const i = places[0];
+        return {
+          technique: 'Hidden Single',
+          cssClass: 't-hidden-single',
+          desc: `${n} can only go in ${cellName(i)} in ${unitName(unit.type, unit.index)}`,
+          highlights: [
+            { cell: i, type: 'set' },
+            ...unit.cells.filter(c => c !== i && board[c] === 0).map(c => ({ cell: c, type: 'source' }))
+          ],
+          candHighlights: [{ cell: i, val: n, type: 'highlight' }],
+          action: () => setValue(i, n)
+        };
+      }
+    }
+  }
+  return null;
+}
+
+function findNakedPair() {
+  for (const unit of allUnits()) {
+    const emptyCells = unit.cells.filter(i => board[i] === 0);
+    for (let a = 0; a < emptyCells.length; a++) {
+      if (candidates[emptyCells[a]].size !== 2) continue;
+      for (let b = a + 1; b < emptyCells.length; b++) {
+        if (candidates[emptyCells[b]].size !== 2) continue;
+        const ca = [...candidates[emptyCells[a]]];
+        const cb = [...candidates[emptyCells[b]]];
+        if (ca[0] === cb[0] && ca[1] === cb[1]) {
+          const pair = ca;
+          const eliminations = [];
+          for (const c of emptyCells) {
+            if (c === emptyCells[a] || c === emptyCells[b]) continue;
+            for (const v of pair) {
+              if (candidates[c].has(v)) eliminations.push({ cell: c, val: v });
+            }
+          }
+          if (eliminations.length > 0) {
+            return {
+              technique: 'Naked Pair',
+              cssClass: 't-naked-pair',
+              desc: `{${pair.join(',')}} in ${cellName(emptyCells[a])},${cellName(emptyCells[b])} in ${unitName(unit.type, unit.index)} — eliminate from peers`,
+              highlights: [
+                { cell: emptyCells[a], type: 'source' },
+                { cell: emptyCells[b], type: 'source' },
+                ...eliminations.map(e => ({ cell: e.cell, type: 'elimination' }))
+              ],
+              candHighlights: [
+                ...pair.map(v => ({ cell: emptyCells[a], val: v, type: 'highlight' })),
+                ...pair.map(v => ({ cell: emptyCells[b], val: v, type: 'highlight' })),
+                ...eliminations.map(e => ({ cell: e.cell, val: e.val, type: 'eliminated' }))
+              ],
+              action: () => eliminations.forEach(e => candidates[e.cell].delete(e.val))
+            };
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function findNakedTriple() {
+  for (const unit of allUnits()) {
+    const emptyCells = unit.cells.filter(i => board[i] === 0 && candidates[i].size >= 2 && candidates[i].size <= 3);
+    if (emptyCells.length < 3) continue;
+    for (let a = 0; a < emptyCells.length; a++)
+      for (let b = a + 1; b < emptyCells.length; b++)
+        for (let c = b + 1; c < emptyCells.length; c++) {
+          const union = new Set([...candidates[emptyCells[a]], ...candidates[emptyCells[b]], ...candidates[emptyCells[c]]]);
+          if (union.size !== 3) continue;
+          const triple = [...union];
+          const tripleCells = [emptyCells[a], emptyCells[b], emptyCells[c]];
+          const eliminations = [];
+          for (const cell of unit.cells.filter(i => board[i] === 0)) {
+            if (tripleCells.includes(cell)) continue;
+            for (const v of triple) {
+              if (candidates[cell].has(v)) eliminations.push({ cell, val: v });
+            }
+          }
+          if (eliminations.length > 0) {
+            return {
+              technique: 'Naked Triple',
+              cssClass: 't-naked-triple',
+              desc: `{${triple.join(',')}} in ${tripleCells.map(cellName).join(',')} in ${unitName(unit.type, unit.index)}`,
+              highlights: [
+                ...tripleCells.map(c => ({ cell: c, type: 'source' })),
+                ...eliminations.map(e => ({ cell: e.cell, type: 'elimination' }))
+              ],
+              candHighlights: [
+                ...tripleCells.flatMap(c => triple.filter(v => candidates[c].has(v)).map(v => ({ cell: c, val: v, type: 'highlight' }))),
+                ...eliminations.map(e => ({ cell: e.cell, val: e.val, type: 'eliminated' }))
+              ],
+              action: () => eliminations.forEach(e => candidates[e.cell].delete(e.val))
+            };
+          }
+        }
+  }
+  return null;
+}
+
+function findHiddenPair() {
+  for (const unit of allUnits()) {
+    const emptyCells = unit.cells.filter(i => board[i] === 0);
+    for (let n1 = 1; n1 <= 9; n1++) {
+      for (let n2 = n1 + 1; n2 <= 9; n2++) {
+        const places1 = emptyCells.filter(i => candidates[i].has(n1));
+        const places2 = emptyCells.filter(i => candidates[i].has(n2));
+        if (places1.length < 2 || places1.length > 3 || places2.length < 2 || places2.length > 3) continue;
+        const common = places1.filter(i => places2.includes(i));
+        if (common.length === 2 && places1.length === 2 && places2.length === 2) {
+          const pair = [n1, n2];
+          const eliminations = [];
+          for (const c of common) {
+            for (const v of candidates[c]) {
+              if (!pair.includes(v)) eliminations.push({ cell: c, val: v });
+            }
+          }
+          if (eliminations.length > 0) {
+            return {
+              technique: 'Hidden Pair',
+              cssClass: 't-hidden-pair',
+              desc: `{${pair.join(',')}} only in ${common.map(cellName).join(',')} in ${unitName(unit.type, unit.index)}`,
+              highlights: [
+                ...common.map(c => ({ cell: c, type: 'source' })),
+                ...eliminations.map(e => ({ cell: e.cell, type: 'elimination' }))
+              ],
+              candHighlights: [
+                ...common.flatMap(c => pair.map(v => ({ cell: c, val: v, type: 'highlight' }))),
+                ...eliminations.map(e => ({ cell: e.cell, val: e.val, type: 'eliminated' }))
+              ],
+              action: () => eliminations.forEach(e => candidates[e.cell].delete(e.val))
+            };
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function findHiddenTriple() {
+  for (const unit of allUnits()) {
+    const emptyCells = unit.cells.filter(i => board[i] === 0);
+    const nums = [];
+    for (let n = 1; n <= 9; n++) {
+      const places = emptyCells.filter(i => candidates[i].has(n));
+      if (places.length >= 2 && places.length <= 3) nums.push(n);
+    }
+    if (nums.length < 3) continue;
+    for (let a = 0; a < nums.length; a++)
+      for (let b = a + 1; b < nums.length; b++)
+        for (let c = b + 1; c < nums.length; c++) {
+          const triple = [nums[a], nums[b], nums[c]];
+          const cellsWithAny = new Set();
+          for (const n of triple)
+            for (const i of emptyCells)
+              if (candidates[i].has(n)) cellsWithAny.add(i);
+          if (cellsWithAny.size !== 3) continue;
+          const tripleCells = [...cellsWithAny];
+          const eliminations = [];
+          for (const cell of tripleCells) {
+            for (const v of candidates[cell]) {
+              if (!triple.includes(v)) eliminations.push({ cell, val: v });
+            }
+          }
+          if (eliminations.length > 0) {
+            return {
+              technique: 'Hidden Triple',
+              cssClass: 't-hidden-triple',
+              desc: `{${triple.join(',')}} only in ${tripleCells.map(cellName).join(',')} in ${unitName(unit.type, unit.index)}`,
+              highlights: [
+                ...tripleCells.map(c => ({ cell: c, type: 'source' })),
+              ],
+              candHighlights: [
+                ...tripleCells.flatMap(c => triple.filter(v => candidates[c].has(v)).map(v => ({ cell: c, val: v, type: 'highlight' }))),
+                ...eliminations.map(e => ({ cell: e.cell, val: e.val, type: 'eliminated' }))
+              ],
+              action: () => eliminations.forEach(e => candidates[e.cell].delete(e.val))
+            };
+          }
+        }
+  }
+  return null;
+}
+
+function findPointingPair() {
+  for (let b = 0; b < 9; b++) {
+    const boxCells = getUnit('box', b);
+    for (let n = 1; n <= 9; n++) {
+      const places = boxCells.filter(i => board[i] === 0 && candidates[i].has(n));
+      if (places.length < 2 || places.length > 3) continue;
+      const rows = new Set(places.map(row));
+      const cols = new Set(places.map(col));
+      if (rows.size === 1) {
+        const r = [...rows][0];
+        const rowCells = getUnit('row', r);
+        const eliminations = [];
+        for (const c of rowCells) {
+          if (box(c) === b) continue;
+          if (board[c] === 0 && candidates[c].has(n))
+            eliminations.push({ cell: c, val: n });
+        }
+        if (eliminations.length > 0) {
+          return {
+            technique: 'Pointing Pair',
+            cssClass: 't-pointing',
+            desc: `${n} in Box${b + 1} locked to R${r + 1} — eliminate from rest of row`,
+            highlights: [
+              ...places.map(c => ({ cell: c, type: 'source' })),
+              ...eliminations.map(e => ({ cell: e.cell, type: 'elimination' }))
+            ],
+            candHighlights: [
+              ...places.map(c => ({ cell: c, val: n, type: 'highlight' })),
+              ...eliminations.map(e => ({ cell: e.cell, val: e.val, type: 'eliminated' }))
+            ],
+            action: () => eliminations.forEach(e => candidates[e.cell].delete(e.val))
+          };
+        }
+      }
+      if (cols.size === 1) {
+        const c = [...cols][0];
+        const colCells = getUnit('col', c);
+        const eliminations = [];
+        for (const cell of colCells) {
+          if (box(cell) === b) continue;
+          if (board[cell] === 0 && candidates[cell].has(n))
+            eliminations.push({ cell, val: n });
+        }
+        if (eliminations.length > 0) {
+          return {
+            technique: 'Pointing Pair',
+            cssClass: 't-pointing',
+            desc: `${n} in Box${b + 1} locked to C${c + 1} — eliminate from rest of column`,
+            highlights: [
+              ...places.map(cell => ({ cell, type: 'source' })),
+              ...eliminations.map(e => ({ cell: e.cell, type: 'elimination' }))
+            ],
+            candHighlights: [
+              ...places.map(cell => ({ cell, val: n, type: 'highlight' })),
+              ...eliminations.map(e => ({ cell: e.cell, val: e.val, type: 'eliminated' }))
+            ],
+            action: () => eliminations.forEach(e => candidates[e.cell].delete(e.val))
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function findBoxLineReduction() {
+  for (let n = 1; n <= 9; n++) {
+    // Check rows
+    for (let r = 0; r < 9; r++) {
+      const rowCells = getUnit('row', r);
+      const places = rowCells.filter(i => board[i] === 0 && candidates[i].has(n));
+      if (places.length < 2 || places.length > 3) continue;
+      const boxes = new Set(places.map(box));
+      if (boxes.size === 1) {
+        const b = [...boxes][0];
+        const boxCells = getUnit('box', b);
+        const eliminations = [];
+        for (const c of boxCells) {
+          if (row(c) === r) continue;
+          if (board[c] === 0 && candidates[c].has(n))
+            eliminations.push({ cell: c, val: n });
+        }
+        if (eliminations.length > 0) {
+          return {
+            technique: 'Box/Line Reduction',
+            cssClass: 't-box-line',
+            desc: `${n} in R${r + 1} locked to Box${b + 1} — eliminate from rest of box`,
+            highlights: [
+              ...places.map(c => ({ cell: c, type: 'source' })),
+              ...eliminations.map(e => ({ cell: e.cell, type: 'elimination' }))
+            ],
+            candHighlights: [
+              ...places.map(c => ({ cell: c, val: n, type: 'highlight' })),
+              ...eliminations.map(e => ({ cell: e.cell, val: e.val, type: 'eliminated' }))
+            ],
+            action: () => eliminations.forEach(e => candidates[e.cell].delete(e.val))
+          };
+        }
+      }
+    }
+    // Check cols
+    for (let c = 0; c < 9; c++) {
+      const colCells = getUnit('col', c);
+      const places = colCells.filter(i => board[i] === 0 && candidates[i].has(n));
+      if (places.length < 2 || places.length > 3) continue;
+      const boxes = new Set(places.map(box));
+      if (boxes.size === 1) {
+        const b = [...boxes][0];
+        const boxCells = getUnit('box', b);
+        const eliminations = [];
+        for (const cell of boxCells) {
+          if (col(cell) === c) continue;
+          if (board[cell] === 0 && candidates[cell].has(n))
+            eliminations.push({ cell, val: n });
+        }
+        if (eliminations.length > 0) {
+          return {
+            technique: 'Box/Line Reduction',
+            cssClass: 't-box-line',
+            desc: `${n} in C${c + 1} locked to Box${b + 1} — eliminate from rest of box`,
+            highlights: [
+              ...places.map(cell => ({ cell, type: 'source' })),
+              ...eliminations.map(e => ({ cell: e.cell, type: 'elimination' }))
+            ],
+            candHighlights: [
+              ...places.map(cell => ({ cell, val: n, type: 'highlight' })),
+              ...eliminations.map(e => ({ cell: e.cell, val: e.val, type: 'eliminated' }))
+            ],
+            action: () => eliminations.forEach(e => candidates[e.cell].delete(e.val))
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function findXWing() {
+  for (let n = 1; n <= 9; n++) {
+    // Row-based X-Wing
+    for (let r1 = 0; r1 < 9; r1++) {
+      const cols1 = [];
+      for (let c = 0; c < 9; c++) {
+        const i = idx(r1, c);
+        if (board[i] === 0 && candidates[i].has(n)) cols1.push(c);
+      }
+      if (cols1.length !== 2) continue;
+      for (let r2 = r1 + 1; r2 < 9; r2++) {
+        const cols2 = [];
+        for (let c = 0; c < 9; c++) {
+          const i = idx(r2, c);
+          if (board[i] === 0 && candidates[i].has(n)) cols2.push(c);
+        }
+        if (cols2.length !== 2 || cols2[0] !== cols1[0] || cols2[1] !== cols1[1]) continue;
+        const corners = [idx(r1, cols1[0]), idx(r1, cols1[1]), idx(r2, cols1[0]), idx(r2, cols1[1])];
+        const eliminations = [];
+        for (const c of cols1) {
+          for (let r = 0; r < 9; r++) {
+            if (r === r1 || r === r2) continue;
+            const i = idx(r, c);
+            if (board[i] === 0 && candidates[i].has(n))
+              eliminations.push({ cell: i, val: n });
+          }
+        }
+        if (eliminations.length > 0) {
+          return {
+            technique: 'X-Wing',
+            cssClass: 't-x-wing',
+            desc: `${n} X-Wing at R${r1+1},R${r2+1} × C${cols1[0]+1},C${cols1[1]+1}`,
+            highlights: [
+              ...corners.map(c => ({ cell: c, type: 'source' })),
+              ...eliminations.map(e => ({ cell: e.cell, type: 'elimination' }))
+            ],
+            candHighlights: [
+              ...corners.map(c => ({ cell: c, val: n, type: 'highlight' })),
+              ...eliminations.map(e => ({ cell: e.cell, val: e.val, type: 'eliminated' }))
+            ],
+            action: () => eliminations.forEach(e => candidates[e.cell].delete(e.val))
+          };
+        }
+      }
+    }
+    // Column-based X-Wing
+    for (let c1 = 0; c1 < 9; c1++) {
+      const rows1 = [];
+      for (let r = 0; r < 9; r++) {
+        const i = idx(r, c1);
+        if (board[i] === 0 && candidates[i].has(n)) rows1.push(r);
+      }
+      if (rows1.length !== 2) continue;
+      for (let c2 = c1 + 1; c2 < 9; c2++) {
+        const rows2 = [];
+        for (let r = 0; r < 9; r++) {
+          const i = idx(r, c2);
+          if (board[i] === 0 && candidates[i].has(n)) rows2.push(r);
+        }
+        if (rows2.length !== 2 || rows2[0] !== rows1[0] || rows2[1] !== rows1[1]) continue;
+        const corners = [idx(rows1[0], c1), idx(rows1[1], c1), idx(rows1[0], c2), idx(rows1[1], c2)];
+        const eliminations = [];
+        for (const r of rows1) {
+          for (let c = 0; c < 9; c++) {
+            if (c === c1 || c === c2) continue;
+            const i = idx(r, c);
+            if (board[i] === 0 && candidates[i].has(n))
+              eliminations.push({ cell: i, val: n });
+          }
+        }
+        if (eliminations.length > 0) {
+          return {
+            technique: 'X-Wing',
+            cssClass: 't-x-wing',
+            desc: `${n} X-Wing at C${c1+1},C${c2+1} × R${rows1[0]+1},R${rows1[1]+1}`,
+            highlights: [
+              ...corners.map(c => ({ cell: c, type: 'source' })),
+              ...eliminations.map(e => ({ cell: e.cell, type: 'elimination' }))
+            ],
+            candHighlights: [
+              ...corners.map(c => ({ cell: c, val: n, type: 'highlight' })),
+              ...eliminations.map(e => ({ cell: e.cell, val: e.val, type: 'eliminated' }))
+            ],
+            action: () => eliminations.forEach(e => candidates[e.cell].delete(e.val))
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function findXYWing() {
+  for (let pivot = 0; pivot < 81; pivot++) {
+    if (board[pivot] !== 0 || candidates[pivot].size !== 2) continue;
+    const [x, y] = [...candidates[pivot]];
+    const peerList = peers(pivot);
+    const wingCandidatesXZ = peerList.filter(i => board[i] === 0 && candidates[i].size === 2 && candidates[i].has(x) && !candidates[i].has(y));
+    const wingCandidatesYZ = peerList.filter(i => board[i] === 0 && candidates[i].size === 2 && candidates[i].has(y) && !candidates[i].has(x));
+    for (const w1 of wingCandidatesXZ) {
+      const z1 = [...candidates[w1]].find(v => v !== x);
+      for (const w2 of wingCandidatesYZ) {
+        const z2 = [...candidates[w2]].find(v => v !== y);
+        if (z1 !== z2) continue;
+        const z = z1;
+        const peersW1 = new Set(peers(w1));
+        const peersW2 = new Set(peers(w2));
+        const eliminations = [];
+        for (let i = 0; i < 81; i++) {
+          if (i === pivot || i === w1 || i === w2) continue;
+          if (board[i] === 0 && candidates[i].has(z) && peersW1.has(i) && peersW2.has(i)) {
+            eliminations.push({ cell: i, val: z });
+          }
+        }
+        if (eliminations.length > 0) {
+          return {
+            technique: 'XY-Wing',
+            cssClass: 't-xy-wing',
+            desc: `Pivot ${cellName(pivot)}(${x}${y}), Wings ${cellName(w1)}(${x}${z}),${cellName(w2)}(${y}${z}) — eliminate ${z}`,
+            highlights: [
+              { cell: pivot, type: 'source' },
+              { cell: w1, type: 'target' },
+              { cell: w2, type: 'target' },
+              ...eliminations.map(e => ({ cell: e.cell, type: 'elimination' }))
+            ],
+            candHighlights: [
+              { cell: pivot, val: x, type: 'highlight' },
+              { cell: pivot, val: y, type: 'highlight' },
+              { cell: w1, val: x, type: 'highlight' },
+              { cell: w1, val: z, type: 'highlight' },
+              { cell: w2, val: y, type: 'highlight' },
+              { cell: w2, val: z, type: 'highlight' },
+              ...eliminations.map(e => ({ cell: e.cell, val: e.val, type: 'eliminated' }))
+            ],
+            action: () => eliminations.forEach(e => candidates[e.cell].delete(e.val))
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// ── Solver Engine ──
+const techniques = [
+  findNakedSingle,
+  findHiddenSingle,
+  findNakedPair,
+  findHiddenPair,
+  findPointingPair,
+  findBoxLineReduction,
+  findNakedTriple,
+  findHiddenTriple,
+  findXWing,
+  findXYWing,
+];
+
+function solveStep() {
+  for (const fn of techniques) {
+    const result = fn();
+    if (result) {
+      result.action();
+      steps++;
+      addLog(result);
+      render(result);
+      updateStats(result.technique);
+      if (isSolved()) {
+        addLog({ technique: 'Solved!', cssClass: 't-naked-single', desc: `Completed in ${steps} steps` });
+        stopAuto();
+      }
+      return true;
+    }
+  }
+  addLog({ technique: 'Stuck', cssClass: 't-x-wing', desc: 'No human technique found — puzzle requires guessing or more advanced techniques' });
+  stopAuto();
+  return false;
+}
+
+function isSolved() {
+  return board.every(v => v !== 0);
+}
+
+// ── Auto Solve ──
+function autoSolve() {
+  if (autoInterval) return;
+  document.getElementById('btnAuto').disabled = true;
+  document.getElementById('btnStop').disabled = false;
+  document.getElementById('btnStep').disabled = true;
+  function tick() {
+    if (!solveStep() || isSolved()) {
+      stopAuto();
+      return;
+    }
+    autoInterval = setTimeout(tick, getSpeed());
+  }
+  tick();
+}
+
+function stopAuto() {
+  if (autoInterval) clearTimeout(autoInterval);
+  autoInterval = null;
+  document.getElementById('btnAuto').disabled = false;
+  document.getElementById('btnStop').disabled = true;
+  document.getElementById('btnStep').disabled = false;
+}
+
+function getSpeed() {
+  return parseInt(document.getElementById('speed').value);
+}
+
+// ── Rendering ──
+function render(step) {
+  const gridEl = document.getElementById('grid');
+  gridEl.innerHTML = '';
+  for (let i = 0; i < 81; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    if (board[i] !== 0) {
+      cell.textContent = board[i];
+      cell.classList.add(given[i] ? 'given' : 'solved');
+    } else {
+      const candDiv = document.createElement('div');
+      candDiv.className = 'candidates';
+      for (let n = 1; n <= 9; n++) {
+        const c = document.createElement('div');
+        c.className = 'cand';
+        if (candidates[i].has(n)) {
+          c.textContent = n;
+          if (step) {
+            const ch = step.candHighlights.find(h => h.cell === i && h.val === n);
+            if (ch) c.classList.add(ch.type);
+          }
+        }
+        candDiv.appendChild(c);
+      }
+      cell.appendChild(candDiv);
+    }
+    if (step) {
+      const h = step.highlights.find(h => h.cell === i);
+      if (h) cell.classList.add('highlight-' + h.type);
+    }
+    gridEl.appendChild(cell);
+  }
+  // Progress
+  const filled = board.filter(v => v !== 0).length;
+  document.getElementById('progress').style.width = (filled / 81 * 100) + '%';
+}
+
+function addLog(step) {
+  const logBody = document.getElementById('log');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${step.cssClass}`;
+  entry.innerHTML = `<span class="technique">[${step.technique}]</span><span class="detail">${step.desc}</span>`;
+  logBody.insertBefore(entry, logBody.firstChild);
+  document.getElementById('logCount').textContent = `${steps} steps`;
+}
+
+function updateStats(technique) {
+  const filled = board.filter(v => v !== 0).length;
+  document.getElementById('statFilled').textContent = filled;
+  document.getElementById('statRemaining').textContent = 81 - filled;
+  document.getElementById('statSteps').textContent = steps;
+  const shortNames = {
+    'Naked Single': 'NS', 'Hidden Single': 'HS',
+    'Naked Pair': 'NP', 'Hidden Pair': 'HP',
+    'Naked Triple': 'NT', 'Hidden Triple': 'HT',
+    'Pointing Pair': 'PP', 'Box/Line Reduction': 'BL',
+    'X-Wing': 'XW', 'XY-Wing': 'XY'
+  };
+  document.getElementById('statTechnique').textContent = shortNames[technique] || technique;
+}
+
+// ── Game Control ──
+function newGame() {
+  stopAuto();
+  const diff = document.getElementById('difficulty').value;
+  board = generatePuzzle(diff);
+  given = board.map(v => v !== 0);
+  initCandidates();
+  steps = 0;
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('logCount').textContent = '0 steps';
+  render(null);
+  updateStats('-');
+  document.getElementById('statTechnique').textContent = '-';
+  addLog({ technique: 'Start', cssClass: 't-hidden-single', desc: `${diff.toUpperCase()} puzzle — ${board.filter(v => v !== 0).length} givens` });
+}
+
+function resetPuzzle() {
+  stopAuto();
+  for (let i = 0; i < 81; i++) {
+    if (!given[i]) board[i] = 0;
+  }
+  initCandidates();
+  steps = 0;
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('logCount').textContent = '0 steps';
+  render(null);
+  updateStats('-');
+  document.getElementById('statTechnique').textContent = '-';
+}
+
+// ── Speed slider ──
+document.getElementById('speed').addEventListener('input', e => {
+  document.getElementById('speedLabel').textContent = e.target.value + 'ms';
+});
+
+// ── Init ──
+newGame();
+</script>
+</body>
+</html>
