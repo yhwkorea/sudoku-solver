@@ -109,15 +109,15 @@
     gap: 1px;
     background: #475569;
     border: 3px solid #94a3b8;
-    width: min(calc(100vh - 32px), 1040px);
-    height: min(calc(100vh - 32px), 1040px);
+    width: min(calc(100vh - 32px), 964px);
+    height: min(calc(100vh - 32px), 964px);
   }
   .cell {
     background: #1e293b;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 42px;
+    font-size: 38px;
     font-weight: 700;
     position: relative;
     cursor: default;
@@ -160,7 +160,7 @@
     background: #334155;
     border-radius: 3px;
     overflow: hidden;
-    width: min(calc(100vh - 32px), 1040px);
+    width: min(calc(100vh - 32px), 964px);
   }
   .progress-fill {
     height: 100%;
@@ -315,6 +315,97 @@
   .t-swordfish { border-left-color: #ff6b6b; }
   .t-bifurcation .technique { color: #94a3b8; }
   .t-bifurcation { border-left-color: #94a3b8; }
+
+  /* Glossary tooltips */
+  .term {
+    border-bottom: 1px dashed #64748b;
+    cursor: help;
+    position: relative;
+    color: #cbd5e1;
+  }
+  .term .tip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #334155;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #e2e8f0;
+    width: 260px;
+    z-index: 100;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    font-weight: 400;
+    white-space: normal;
+    pointer-events: none;
+  }
+  .term .tip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #475569;
+  }
+  .term:hover .tip { display: block; }
+
+  /* Input grid (mini) */
+  .input-section {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 12px;
+    flex-shrink: 0;
+  }
+  .input-section h3 {
+    font-size: 13px;
+    color: #94a3b8;
+    margin-bottom: 8px;
+  }
+  .input-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 1px;
+    background: #475569;
+    border: 2px solid #64748b;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .input-grid input {
+    width: 100%;
+    aspect-ratio: 1;
+    border: none;
+    background: #1e293b;
+    color: #e2e8f0;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: inherit;
+    outline: none;
+    padding: 0;
+  }
+  .input-grid input:focus { background: #334155; }
+  .input-grid input::placeholder { color: #334155; }
+  /* Mini grid thick borders */
+  .input-grid input:nth-child(3n) { border-right: 1.5px solid #64748b; }
+  .input-grid input:nth-child(9n) { border-right: none; }
+  .input-grid input:nth-child(n+19):nth-child(-n+27) { border-bottom: 1.5px solid #64748b; }
+  .input-grid input:nth-child(n+46):nth-child(-n+54) { border-bottom: 1.5px solid #64748b; }
+  .input-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .input-actions button {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
 </style>
 </head>
 <body>
@@ -323,13 +414,17 @@
   <div class="tech-panel" id="techPanel">
     <h2>풀이 기법 Solving Techniques</h2>
 
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px 12px;margin-bottom:4px;font-size:12px;color:#94a3b8;line-height:1.7;">
+      <b style="color:#cbd5e1;">용어 안내</b> &mdash; 설명에서 <span class="term" style="display:inline">밑줄 점선<span class="tip">이렇게 마우스를 올리면 뜻이 나옵니다!</span></span> 위에 마우스를 올려보세요.
+    </div>
+
     <div class="tech-card" data-tech="naked-single" onclick="toggleTech(this)">
       <div class="tech-header">
         <span class="tech-name" style="color:#4ade80">Naked Single</span>
         <span class="tech-difficulty beginner">입문</span>
       </div>
       <div class="tech-desc">
-        <b>후보가 1개만 남은 칸.</b> 같은 행/열/박스에 나머지 숫자가 다 있어서 넣을 수 있는 게 딱 하나뿐인 상황. 보이면 바로 채우면 된다.
+        <b><span class="term">후보<span class="tip">아직 확정되지 않은 칸에 들어갈 수 있는 숫자 목록. 같은 행/열/박스에 이미 있는 숫자를 제외하고 남은 것들.</span></span>가 1개만 남은 칸.</b> 같은 <span class="term">행<span class="tip">가로줄. 스도쿠에는 9개의 행(Row)이 있고, 각 행에 1~9가 한 번씩 들어간다.</span></span>/<span class="term">열<span class="tip">세로줄. 스도쿠에는 9개의 열(Column)이 있고, 각 열에 1~9가 한 번씩 들어간다.</span></span>/<span class="term">박스<span class="tip">3x3 굵은 선으로 구분된 정사각형 영역. 총 9개이며, 각 박스에 1~9가 한 번씩 들어간다.</span></span>에 나머지 숫자가 다 있어서 넣을 수 있는 게 딱 하나뿐인 상황.
       </div>
       <div class="tech-count">사용: <span id="count-naked-single">0</span>회</div>
     </div>
@@ -340,7 +435,7 @@
         <span class="tech-difficulty beginner">입문</span>
       </div>
       <div class="tech-desc">
-        <b>이 숫자가 들어갈 곳이 여기밖에 없는 경우.</b> 칸 자체에는 후보가 여러 개지만, 행/열/박스 전체를 보면 이 숫자를 놓을 수 있는 위치가 딱 하나다.
+        <b>이 숫자가 들어갈 곳이 여기밖에 없는 경우.</b> 칸 자체에는 <span class="term">후보<span class="tip">아직 확정되지 않은 칸에 들어갈 수 있는 숫자 목록.</span></span>가 여러 개지만, <span class="term">행<span class="tip">가로줄. 9개의 행 각각에 1~9가 한 번씩.</span></span>/<span class="term">열<span class="tip">세로줄. 9개의 열 각각에 1~9가 한 번씩.</span></span>/<span class="term">박스<span class="tip">3x3 굵은 선 영역. 9개의 박스 각각에 1~9가 한 번씩.</span></span> 전체를 보면 이 숫자를 놓을 수 있는 위치가 딱 하나다.
       </div>
       <div class="tech-count">사용: <span id="count-hidden-single">0</span>회</div>
     </div>
@@ -351,7 +446,7 @@
         <span class="tech-difficulty intermediate">중급</span>
       </div>
       <div class="tech-desc">
-        <b>같은 영역에서 두 칸이 동일한 후보 2개만 갖는 경우.</b> 이 두 숫자는 무조건 이 두 칸에 들어가니까, 같은 영역의 다른 칸에서 해당 후보를 지울 수 있다.
+        <b>같은 <span class="term">유닛<span class="tip">행, 열, 박스를 통틀어 부르는 말. 각 유닛에는 1~9가 정확히 한 번씩 들어가야 한다.</span></span>에서 두 칸이 동일한 <span class="term">후보<span class="tip">아직 확정되지 않은 칸에 들어갈 수 있는 숫자 목록.</span></span> 2개만 갖는 경우.</b> 이 두 숫자는 무조건 이 두 칸에 들어가니까, 같은 유닛의 다른 칸에서 해당 후보를 지울 수 있다.
       </div>
       <div class="tech-count">사용: <span id="count-naked-pair">0</span>회</div>
     </div>
@@ -362,7 +457,7 @@
         <span class="tech-difficulty intermediate">중급</span>
       </div>
       <div class="tech-desc">
-        <b>두 숫자가 영역 내에서 같은 두 칸에만 존재.</b> 이 두 칸에 있는 나머지 후보들은 필요 없으니 제거해서 쌍만 남긴다.
+        <b>두 숫자가 <span class="term">유닛<span class="tip">행, 열, 박스를 통틀어 부르는 말. 각 유닛에는 1~9가 정확히 한 번씩.</span></span> 내에서 같은 두 칸에만 존재.</b> 이 두 칸에 있는 나머지 <span class="term">후보<span class="tip">아직 확정되지 않은 칸에 들어갈 수 있는 숫자 목록.</span></span>들은 필요 없으니 제거해서 쌍만 남긴다.
       </div>
       <div class="tech-count">사용: <span id="count-hidden-pair">0</span>회</div>
     </div>
@@ -373,7 +468,7 @@
         <span class="tech-difficulty intermediate">중급</span>
       </div>
       <div class="tech-desc">
-        <b>박스 안에서 특정 후보가 한 줄에만 몰려 있는 경우.</b> 이 숫자는 그 줄의 박스 안쪽에 반드시 들어가므로, 박스 바깥 같은 줄의 후보를 지운다.
+        <b><span class="term">박스<span class="tip">3x3 굵은 선으로 구분된 정사각형 영역. 총 9개.</span></span> 안에서 특정 <span class="term">후보<span class="tip">아직 확정되지 않은 칸에 들어갈 수 있는 숫자 목록.</span></span>가 한 <span class="term">행<span class="tip">가로줄. 9개의 행 각각에 1~9가 한 번씩.</span></span> 또는 <span class="term">열<span class="tip">세로줄. 9개의 열 각각에 1~9가 한 번씩.</span></span>에만 몰려 있는 경우.</b> 이 숫자는 그 줄의 박스 안쪽에 반드시 들어가므로, 박스 바깥 같은 줄의 후보를 지운다.
       </div>
       <div class="tech-count">사용: <span id="count-pointing-pair">0</span>회</div>
     </div>
@@ -384,7 +479,7 @@
         <span class="tech-difficulty intermediate">중급</span>
       </div>
       <div class="tech-desc">
-        <b>행/열에서 특정 후보가 하나의 박스 안에만 있는 경우.</b> Pointing Pair의 반대 방향. 같은 박스의 다른 칸에서 해당 후보를 지운다.
+        <b><span class="term">행<span class="tip">가로줄.</span></span>/<span class="term">열<span class="tip">세로줄.</span></span>에서 특정 <span class="term">후보<span class="tip">아직 확정되지 않은 칸에 들어갈 수 있는 숫자 목록.</span></span>가 하나의 <span class="term">박스<span class="tip">3x3 굵은 선 영역.</span></span> 안에만 있는 경우.</b> Pointing Pair의 반대 방향. 같은 박스의 다른 칸에서 해당 후보를 지운다.
       </div>
       <div class="tech-count">사용: <span id="count-box-line">0</span>회</div>
     </div>
@@ -395,7 +490,7 @@
         <span class="tech-difficulty intermediate">중급</span>
       </div>
       <div class="tech-desc">
-        <b>세 칸이 합쳐서 후보 3개만 갖는 경우.</b> Naked Pair의 확장. 이 세 숫자는 세 칸에 고정이니까 영역 내 나머지 칸에서 제거한다.
+        <b>세 칸이 합쳐서 <span class="term">후보<span class="tip">아직 확정되지 않은 칸에 들어갈 수 있는 숫자 목록.</span></span> 3개만 갖는 경우.</b> Naked Pair의 확장. 이 세 숫자는 세 칸에 고정이니까 <span class="term">유닛<span class="tip">행, 열, 박스를 통틀어 부르는 말.</span></span> 내 나머지 칸에서 제거한다.
       </div>
       <div class="tech-count">사용: <span id="count-naked-triple">0</span>회</div>
     </div>
@@ -406,7 +501,7 @@
         <span class="tech-difficulty advanced">고급</span>
       </div>
       <div class="tech-desc">
-        <b>세 숫자가 영역에서 오직 세 칸에만 나타나는 경우.</b> 그 세 칸의 다른 후보들을 전부 제거한다.
+        <b>세 숫자가 <span class="term">유닛<span class="tip">행, 열, 박스를 통틀어 부르는 말.</span></span>에서 오직 세 칸에만 나타나는 경우.</b> 그 세 칸의 다른 <span class="term">후보<span class="tip">아직 확정되지 않은 칸에 들어갈 수 있는 숫자 목록.</span></span>들을 전부 제거한다.
       </div>
       <div class="tech-count">사용: <span id="count-hidden-triple">0</span>회</div>
     </div>
@@ -417,7 +512,7 @@
         <span class="tech-difficulty advanced">고급</span>
       </div>
       <div class="tech-desc">
-        <b>한 후보가 두 행에서 각각 같은 두 열에만 있는 경우.</b> 사각형 꼭짓점 4칸을 형성하며, 대각선 중 하나에 반드시 배치된다. 해당 열의 나머지 칸에서 후보를 제거한다.
+        <b>한 <span class="term">후보<span class="tip">아직 확정되지 않은 칸에 들어갈 수 있는 숫자 목록.</span></span>가 두 <span class="term">행<span class="tip">가로줄.</span></span>에서 각각 같은 두 <span class="term">열<span class="tip">세로줄.</span></span>에만 있는 경우.</b> 사각형 꼭짓점 4칸을 형성하며, 대각선 중 하나에 반드시 배치된다. 해당 열의 나머지 칸에서 후보를 제거한다.
       </div>
       <div class="tech-count">사용: <span id="count-x-wing">0</span>회</div>
     </div>
@@ -428,7 +523,7 @@
         <span class="tech-difficulty advanced">고급</span>
       </div>
       <div class="tech-desc">
-        <b>피벗(XY) + 날개1(XZ) + 날개2(YZ) 세 칸의 체인.</b> 피벗이 X든 Y든, 결국 Z는 두 날개 중 하나에 확정된다. 두 날개가 동시에 보는 칸에서 Z를 제거한다.
+        <b><span class="term">피벗<span class="tip">XY-Wing의 중심 칸. 후보가 2개(X, Y)이고 두 날개 칸을 각각 볼 수 있는 위치에 있다.</span></span>(XY) + 날개1(XZ) + 날개2(YZ) 세 칸의 체인.</b> 피벗이 X든 Y든, 결국 Z는 두 날개 중 하나에 확정된다. 두 날개가 동시에 <span class="term">보는<span class="tip">"본다" = 같은 행, 같은 열, 또는 같은 박스에 있어서 서로 영향을 주는 관계.</span></span> 칸에서 Z를 제거한다.
       </div>
       <div class="tech-count">사용: <span id="count-xy-wing">0</span>회</div>
     </div>
@@ -439,7 +534,7 @@
         <span class="tech-difficulty expert">전문가</span>
       </div>
       <div class="tech-desc">
-        <b>X-Wing을 3행 x 3열로 확장한 패턴.</b> 한 후보가 세 행에서 각각 2~3곳에만 있고, 전부 같은 세 열 안에 있으면 그 열의 나머지 칸에서 제거한다.
+        <b>X-Wing을 3<span class="term">행<span class="tip">가로줄.</span></span> x 3<span class="term">열<span class="tip">세로줄.</span></span>로 확장한 패턴.</b> 한 <span class="term">후보<span class="tip">아직 확정되지 않은 칸에 들어갈 수 있는 숫자 목록.</span></span>가 세 행에서 각각 2~3곳에만 있고, 전부 같은 세 열 안에 있으면 그 열의 나머지 칸에서 제거한다.
       </div>
       <div class="tech-count">사용: <span id="count-swordfish">0</span>회</div>
     </div>
@@ -450,7 +545,7 @@
         <span class="tech-difficulty expert">전문가</span>
       </div>
       <div class="tech-desc">
-        <b>논리만으로 안 풀릴 때 쓰는 가정법.</b> 후보가 가장 적은 칸을 골라 하나를 넣어보고, 모순이 생기면 되돌려서 다른 걸 시도한다. "이게 3이라면..." 하고 따져보는 방식.
+        <b>논리만으로 안 풀릴 때 쓰는 가정법.</b> <span class="term">후보<span class="tip">아직 확정되지 않은 칸에 들어갈 수 있는 숫자 목록.</span></span>가 가장 적은 칸을 골라 하나를 넣어보고, 모순이 생기면 되돌려서 다른 걸 시도한다. "이게 3이라면..." 하고 따져보는 방식.
       </div>
       <div class="tech-count">사용: <span id="count-bifurcation">0</span>회</div>
     </div>
@@ -470,6 +565,17 @@
   <div class="panel">
     <h1>Sudoku Human Solver</h1>
 
+    <!-- Custom puzzle input -->
+    <div class="input-section">
+      <h3>직접 입력 (1~9, 빈칸은 비워두기)</h3>
+      <div class="input-grid" id="inputGrid"></div>
+      <div class="input-actions">
+        <button onclick="loadCustomPuzzle()">이 퍼즐 풀기</button>
+        <button onclick="clearInputGrid()">지우기</button>
+        <button onclick="copyFromMain()">현재 퍼즐 복사</button>
+      </div>
+    </div>
+
     <div class="controls">
       <select id="difficulty">
         <option value="easy">Easy</option>
@@ -477,7 +583,7 @@
         <option value="hard">Hard</option>
         <option value="expert">Expert</option>
       </select>
-      <button onclick="newGame()" class="primary">New Puzzle</button>
+      <button onclick="newGame()" class="primary">랜덤 생성</button>
     </div>
 
     <div class="controls">
@@ -1609,7 +1715,109 @@ document.getElementById('speed').addEventListener('input', e => {
   document.getElementById('speedLabel').textContent = e.target.value + 'ms';
 });
 
+// ── Input Grid ──
+function buildInputGrid() {
+  const grid = document.getElementById('inputGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 81; i++) {
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.maxLength = 1;
+    inp.placeholder = '.';
+    inp.addEventListener('input', e => {
+      const v = e.target.value;
+      if (v && (v < '1' || v > '9')) e.target.value = '';
+    });
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || (e.key === 'Tab' && !e.shiftKey)) {
+        e.preventDefault();
+        const next = grid.children[Math.min(i + 1, 80)];
+        if (next) next.focus();
+      } else if (e.key === 'ArrowLeft' || (e.key === 'Tab' && e.shiftKey)) {
+        e.preventDefault();
+        const prev = grid.children[Math.max(i - 1, 0)];
+        if (prev) prev.focus();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = grid.children[Math.min(i + 9, 80)];
+        if (next) next.focus();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prev = grid.children[Math.max(i - 9, 0)];
+        if (prev) prev.focus();
+      } else if (e.key === 'Backspace' && !e.target.value) {
+        e.preventDefault();
+        const prev = grid.children[Math.max(i - 1, 0)];
+        if (prev) prev.focus();
+      }
+    });
+    // Auto-advance on valid input
+    inp.addEventListener('input', e => {
+      if (e.target.value && e.target.value >= '1' && e.target.value <= '9') {
+        const next = grid.children[Math.min(i + 1, 80)];
+        if (next) next.focus();
+      }
+    });
+    grid.appendChild(inp);
+  }
+}
+
+function loadCustomPuzzle() {
+  const grid = document.getElementById('inputGrid');
+  const puzzle = [];
+  for (let i = 0; i < 81; i++) {
+    const v = parseInt(grid.children[i].value);
+    puzzle.push((v >= 1 && v <= 9) ? v : 0);
+  }
+  // Validate: check no duplicates in any unit
+  for (let u = 0; u < 9; u++) {
+    for (const type of ['row', 'col', 'box']) {
+      const cells = getUnit(type, u);
+      const seen = new Set();
+      for (const c of cells) {
+        if (puzzle[c] !== 0) {
+          if (seen.has(puzzle[c])) {
+            alert('입력 오류: 같은 행/열/박스에 중복 숫자가 있습니다.');
+            return;
+          }
+          seen.add(puzzle[c]);
+        }
+      }
+    }
+  }
+  stopAuto();
+  bifurcationStack = [];
+  board = puzzle;
+  given = board.map(v => v !== 0);
+  initCandidates();
+  steps = 0;
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('logCount').textContent = '0 steps';
+  resetTechCounts();
+  render(null);
+  updateStats('-');
+  document.getElementById('statTechnique').textContent = '-';
+  const filledCount = board.filter(v => v !== 0).length;
+  addLog({ technique: 'Custom', cssClass: 't-hidden-single', desc: `사용자 입력 퍼즐 — ${filledCount}칸 채워짐` });
+}
+
+function clearInputGrid() {
+  const grid = document.getElementById('inputGrid');
+  for (let i = 0; i < 81; i++) {
+    grid.children[i].value = '';
+  }
+  grid.children[0].focus();
+}
+
+function copyFromMain() {
+  const grid = document.getElementById('inputGrid');
+  for (let i = 0; i < 81; i++) {
+    grid.children[i].value = given[i] ? board[i] : '';
+  }
+}
+
 // ── Init ──
+buildInputGrid();
 newGame();
 </script>
 </body>
