@@ -770,8 +770,9 @@
       </div>
 
       <div class="controls">
-        <button onclick="solveStep()" id="btnStep">Next Step</button>
-        <button onclick="autoSolve()" id="btnAuto">Auto Solve</button>
+        <button onclick="prevStep()">← Prev</button>
+        <button onclick="solveStep()" id="btnStep">Next →</button>
+        <button onclick="autoSolve()" id="btnAuto">Auto</button>
         <button onclick="stopAuto()" id="btnStop" disabled>Stop</button>
         <button onclick="resetPuzzle()">Reset</button>
       </div>
@@ -874,6 +875,7 @@ let steps = 0;
 let autoInterval = null;
 let solution = [];   // correct answer for play mode
 let guessDepth = []; // 0=logic, 1+=bifurcation depth when cell was filled
+let solveHistory = []; // state snapshots for previous step
 
 // ── Utilities ──
 const ROWS = 9, COLS = 9;
@@ -1834,6 +1836,19 @@ const techniques = [
 ];
 
 function solveStep() {
+  // Save state before step
+  solveHistory.push({
+    board: [...board],
+    candidates: candidates.map(s => new Set(s)),
+    guessDepth: [...guessDepth],
+    bifurcationStack: bifurcationStack.map(s => ({
+      board: [...s.board], candidates: s.candidates.map(c => new Set(c)),
+      guessDepth: [...s.guessDepth], cell: s.cell, triedVal: s.triedVal,
+      remainingVals: [...s.remainingVals]
+    })),
+    steps
+  });
+
   // Check for contradiction from bifurcation
   if (bifurcationStack.length > 0 && checkContradiction()) {
     const result = backtrack();
@@ -1880,6 +1895,23 @@ function solveStep() {
   addLog({ technique: 'Stuck', cssClass: 't-x-wing', desc: 'Cannot solve — no candidates left to try' });
   stopAuto();
   return false;
+}
+
+function prevStep() {
+  if (solveHistory.length === 0) return;
+  stopAuto();
+  const snap = solveHistory.pop();
+  board = snap.board;
+  candidates = snap.candidates;
+  guessDepth = snap.guessDepth;
+  bifurcationStack = snap.bifurcationStack;
+  steps = snap.steps;
+  // Remove last log entry
+  const logBody = document.getElementById('log');
+  if (logBody.firstChild) logBody.removeChild(logBody.firstChild);
+  document.getElementById('logCount').textContent = `${steps} steps`;
+  render(null);
+  updateStats('-');
 }
 
 function isSolved() {
@@ -2088,6 +2120,7 @@ function newGame() {
 function resetPuzzle() {
   stopAuto();
   bifurcationStack = [];
+  solveHistory = [];
   for (let i = 0; i < 81; i++) {
     if (!given[i]) board[i] = 0;
   }
