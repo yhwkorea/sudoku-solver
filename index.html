@@ -125,7 +125,9 @@
   }
   .cell.given { color: #94a3b8; }
   .cell.solved { color: #38bdf8; }
-  .cell.guess { font-weight: 700; color: #f1f5f9; }
+  .cell.guess-1 { color: #fbbf24; }
+  .cell.guess-2 { color: #fb923c; }
+  .cell.guess-3 { color: #f87171; }
   .cell.highlight-source { background: #1e3a5f !important; }
   .cell.highlight-target { background: #3b1f1f !important; }
   .cell.highlight-elimination { background: #4a1942 !important; }
@@ -1890,21 +1892,8 @@ function render(step) {
       if (given[i]) {
         cell.classList.add('given');
       } else if (guessDepth[i] > 0) {
-        cell.classList.add('guess');
-        // 숫자 색: 노랑/빨강 칼 분할 — depth 1=전체노랑, 2=위2/3노랑+아래1/3빨강, 3=위1/3노랑+아래2/3빨강, 4+=전체빨강
-        const d = Math.min(guessDepth[i], 4);
-        const yellowPct = Math.round(((4 - d) / 3) * 100);
-        const Y = '#fbbf24', R = '#ef4444';
-        if (yellowPct >= 100) {
-          cell.style.color = Y;
-        } else if (yellowPct <= 0) {
-          cell.style.color = R;
-        } else {
-          cell.style.background = `linear-gradient(to bottom, ${Y} ${yellowPct}%, ${R} ${yellowPct}%)`;
-          cell.style.backgroundClip = 'text';
-          cell.style.webkitBackgroundClip = 'text';
-          cell.style.webkitTextFillColor = 'transparent';
-        }
+        const d = Math.min(guessDepth[i], 3);
+        cell.classList.add('guess-' + d);
       } else {
         cell.classList.add('solved');
       }
