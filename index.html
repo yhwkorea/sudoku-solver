@@ -125,6 +125,9 @@
   }
   .cell.given { color: #94a3b8; }
   .cell.solved { color: #38bdf8; }
+  .cell.guess-1 { color: #fbbf24; }
+  .cell.guess-2 { color: #fb923c; }
+  .cell.guess-3 { color: #f87171; }
   .cell.highlight-source { background: #1e3a5f !important; }
   .cell.highlight-target { background: #3b1f1f !important; }
   .cell.highlight-elimination { background: #4a1942 !important; }
@@ -803,6 +806,7 @@ let candidates = []; // Set of possible numbers per cell
 let steps = 0;
 let autoInterval = null;
 let solution = [];   // correct answer for play mode
+let guessDepth = []; // 0=logic, 1+=bifurcation depth when cell was filled
 
 // ── Utilities ──
 const ROWS = 9, COLS = 9;
@@ -1036,6 +1040,7 @@ function generatePuzzle(targetDiff) {
 // ── Init Candidates ──
 function initCandidates() {
   candidates = Array.from({ length: 81 }, () => new Set());
+  guessDepth = Array(81).fill(0);
   for (let i = 0; i < 81; i++) {
     if (board[i] !== 0) continue;
     for (let n = 1; n <= 9; n++) {
@@ -1047,6 +1052,7 @@ function initCandidates() {
 function setValue(i, val) {
   board[i] = val;
   candidates[i].clear();
+  guessDepth[i] = bifurcationStack.length; // 0=logic, 1+=guess depth
   for (const p of peers(i)) {
     candidates[p].delete(val);
   }
@@ -1669,6 +1675,7 @@ function findBifurcation() {
   const snapshot = {
     board: [...board],
     candidates: candidates.map(s => new Set(s)),
+    guessDepth: [...guessDepth],
     cell: bestCell,
     triedVal: tryVal,
     remainingVals: [...candidates[bestCell]].slice(1)
@@ -1716,10 +1723,12 @@ function backtrack() {
       // Restore state
       board = snapshot.board;
       candidates = snapshot.candidates;
+      guessDepth = snapshot.guessDepth;
       const nextVal = snapshot.remainingVals[0];
       const newSnapshot = {
         board: [...board],
         candidates: candidates.map(s => new Set(s)),
+        guessDepth: [...guessDepth],
         cell: snapshot.cell,
         triedVal: nextVal,
         remainingVals: snapshot.remainingVals.slice(1)
@@ -1737,6 +1746,7 @@ function backtrack() {
     // All values exhausted at this level, restore and continue popping
     board = snapshot.board;
     candidates = snapshot.candidates;
+    guessDepth = snapshot.guessDepth;
   }
   return null;
 }
@@ -1845,7 +1855,14 @@ function render(step) {
     cell.className = 'cell';
     if (board[i] !== 0) {
       cell.textContent = board[i];
-      cell.classList.add(given[i] ? 'given' : 'solved');
+      if (given[i]) {
+        cell.classList.add('given');
+      } else if (guessDepth[i] > 0) {
+        const d = Math.min(guessDepth[i], 3);
+        cell.classList.add('guess-' + d);
+      } else {
+        cell.classList.add('solved');
+      }
     } else {
       const candDiv = document.createElement('div');
       candDiv.className = 'candidates';
