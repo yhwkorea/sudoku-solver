@@ -662,8 +662,8 @@
 
     <!-- Mode Toggle -->
     <div class="mode-toggle">
-      <button class="mode-btn active" onclick="setMode('solver')">Solver</button>
-      <button class="mode-btn" onclick="setMode('play')">Play</button>
+      <button class="mode-btn" onclick="setMode('solver')">Solver</button>
+      <button class="mode-btn active" onclick="setMode('play')">Play</button>
     </div>
 
     <!-- Shared: difficulty + generate -->
@@ -678,7 +678,7 @@
     </div>
 
     <!-- Solver Controls -->
-    <div id="solverControls">
+    <div id="solverControls" style="display:none;">
       <!-- Custom puzzle input -->
       <div class="input-section">
         <h3>직접 입력 (1~9, 빈칸은 비워두기)</h3>
@@ -732,7 +732,7 @@
     </div>
 
     <!-- Play Controls -->
-    <div id="playControls" style="display:none;">
+    <div id="playControls">
       <div class="timer" id="timer">00:00</div>
       <div class="play-controls">
         <div class="numpad" id="numpad">
@@ -2090,7 +2090,7 @@ function copyFromMain() {
 }
 
 // ── Play Mode State ──
-let gameMode = 'solver';  // 'solver' or 'play'
+let gameMode = 'play';  // 'solver' or 'play'
 let selectedCell = -1;
 let pencilMode = false;
 let playerBoard = [];     // player's filled numbers (0 = empty)
