@@ -125,9 +125,7 @@
   }
   .cell.given { color: #94a3b8; }
   .cell.solved { color: #38bdf8; }
-  .cell.guess-1 { color: #fbbf24; }
-  .cell.guess-2 { color: #fb923c; }
-  .cell.guess-3 { color: #f87171; }
+  .cell.guess { font-weight: 700; }
   .cell.highlight-source { background: #1e3a5f !important; }
   .cell.highlight-target { background: #3b1f1f !important; }
   .cell.highlight-elimination { background: #4a1942 !important; }
@@ -1892,8 +1890,16 @@ function render(step) {
       if (given[i]) {
         cell.classList.add('given');
       } else if (guessDepth[i] > 0) {
-        const d = Math.min(guessDepth[i], 3);
-        cell.classList.add('guess-' + d);
+        cell.classList.add('guess');
+        // 노랑:빨강 비율 — depth 1=3:0, 2=2:1, 3=1:2, 4+=0:3
+        const d = Math.min(guessDepth[i], 4);
+        const redRatio = (d - 1) / 3; // 0, 0.33, 0.67, 1.0
+        const yellowStop = Math.round((1 - redRatio) * 100);
+        cell.style.background = `linear-gradient(to bottom, #fbbf24 0%, #fbbf24 ${yellowStop}%, #ef4444 ${yellowStop}%, #ef4444 100%)`;
+        cell.style.backgroundClip = 'text';
+        cell.style.webkitBackgroundClip = 'text';
+        cell.style.webkitTextFillColor = 'transparent';
+        cell.style.color = 'transparent';
       } else {
         cell.classList.add('solved');
       }
