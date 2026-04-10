@@ -1825,6 +1825,7 @@ function solveStep() {
       render(result);
       updateStats(result.technique);
       if (isSolved()) {
+        render(null); // 하이라이트 제거
         addLog({ technique: 'Solved!', cssClass: 't-naked-single', desc: `Completed in ${steps} steps` });
         stopAuto();
       }
