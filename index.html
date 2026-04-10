@@ -439,12 +439,29 @@
   .cell.same-num { background: #1a2744 !important; }
   .cell.error { color: #ef4444 !important; }
   .cell.player-filled { color: #4ade80; }
-  .cell.hint-cell {
-    animation: hintPulse 1.2s ease-in-out infinite;
+  .cell.hint-set {
+    animation: hintPulseGreen 1.2s ease-in-out infinite;
+    background: #052e16 !important;
   }
-  @keyframes hintPulse {
+  .cell.hint-source {
+    animation: hintPulseYellow 1.2s ease-in-out infinite;
+    background: #1a1a2e !important;
+  }
+  .cell.hint-elim {
+    animation: hintPulseRed 1.2s ease-in-out infinite;
+    background: #1c0a0a !important;
+  }
+  @keyframes hintPulseGreen {
+    0%, 100% { outline: 2px solid transparent; }
+    50% { outline: 2px solid #4ade80; outline-offset: -2px; }
+  }
+  @keyframes hintPulseYellow {
     0%, 100% { outline: 2px solid transparent; }
     50% { outline: 2px solid #fbbf24; outline-offset: -2px; }
+  }
+  @keyframes hintPulseRed {
+    0%, 100% { outline: 2px solid transparent; }
+    50% { outline: 2px solid #ef4444; outline-offset: -2px; }
   }
 
   .play-controls { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
@@ -2201,14 +2218,19 @@ function renderPlay() {
       }
     }
 
-    // Hint highlight
+    // Hint highlight — set=초록, source=노랑, elimination=빨강
     if (hintStep) {
       const h = hintStep.highlights.find(h => h.cell === i);
-      if (h) cell.classList.add('hint-cell');
+      if (h) {
+        const cls = h.type === 'set' ? 'hint-set' : h.type === 'elimination' ? 'hint-elim' : 'hint-source';
+        cell.classList.add(cls);
+      }
       if (hintStep.candHighlights) {
-        // Also highlight candidate-level hints in pencil marks
         const ch = hintStep.candHighlights.find(c => c.cell === i);
-        if (ch) cell.classList.add('hint-cell');
+        if (ch) {
+          const cls = ch.type === 'eliminated' ? 'hint-elim' : 'hint-source';
+          cell.classList.add(cls);
+        }
       }
     }
 
