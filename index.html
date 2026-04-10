@@ -731,19 +731,16 @@ function shuffle(arr) {
   }
 }
 
-function generatePuzzle(diff) {
+function generateRawPuzzle(removeTarget) {
   const solved = generateSolved();
   const puzzle = [...solved];
-  const removeCounts = { easy: 36, medium: 46, hard: 52, expert: 56 };
-  const toRemove = removeCounts[diff] || 46;
   const indices = Array.from({ length: 81 }, (_, i) => i);
   shuffle(indices);
   let removed = 0;
   for (const i of indices) {
-    if (removed >= toRemove) break;
+    if (removed >= removeTarget) break;
     const backup = puzzle[i];
     puzzle[i] = 0;
-    // Check unique solution
     let count = 0;
     const temp = [...puzzle];
     function countSolutions(pos) {
@@ -766,6 +763,104 @@ function generatePuzzle(diff) {
     }
   }
   return puzzle;
+}
+
+// ── Difficulty Classification ──
+// Solve a copy with human techniques, return the hardest technique level used
+const TECH_LEVELS = {
+  'Naked Single': 'easy', 'Hidden Single': 'easy',
+  'Naked Pair': 'medium', 'Hidden Pair': 'medium',
+  'Pointing Pair': 'medium', 'Box/Line Reduction': 'medium',
+  'Naked Triple': 'medium', 'Hidden Triple': 'hard',
+  'X-Wing': 'hard', 'XY-Wing': 'hard',
+  'Swordfish': 'expert', 'Bifurcation': 'expert'
+};
+const LEVEL_ORDER = { easy: 0, medium: 1, hard: 2, expert: 3 };
+
+function classifyPuzzle(puzzle) {
+  // Deep copy state
+  const testBoard = [...puzzle];
+  const testCands = Array.from({ length: 81 }, () => new Set());
+  for (let i = 0; i < 81; i++) {
+    if (testBoard[i] !== 0) continue;
+    for (let n = 1; n <= 9; n++) {
+      if (canPlace(testBoard, i, n)) testCands[i].add(n);
+    }
+  }
+
+  // Temporarily swap global state
+  const origBoard = board, origCands = candidates, origBifStack = bifurcationStack;
+  board = testBoard;
+  candidates = testCands;
+  bifurcationStack = [];
+
+  let maxLevel = 'easy';
+  let stuck = false;
+  let iterations = 0;
+  const maxIter = 500;
+
+  while (!board.every(v => v !== 0) && !stuck && iterations < maxIter) {
+    iterations++;
+    let found = false;
+    for (const fn of techniques) {
+      const result = fn();
+      if (result) {
+        const techLevel = TECH_LEVELS[result.technique] || 'expert';
+        if (LEVEL_ORDER[techLevel] > LEVEL_ORDER[maxLevel]) {
+          maxLevel = techLevel;
+        }
+        result.action();
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      // Needs bifurcation
+      maxLevel = 'expert';
+      stuck = true;
+    }
+  }
+
+  // Restore global state
+  board = origBoard;
+  candidates = origCands;
+  bifurcationStack = origBifStack;
+
+  return maxLevel;
+}
+
+function generatePuzzle(targetDiff) {
+  // Remove range tuned per difficulty to increase hit rate
+  const removeRanges = {
+    easy:   [32, 40],
+    medium: [40, 50],
+    hard:   [46, 54],
+    expert: [50, 58]
+  };
+  const [minRm, maxRm] = removeRanges[targetDiff] || [40, 50];
+  const maxAttempts = 60;
+  let bestPuzzle = null;
+  let bestDist = 999;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const removeTarget = minRm + Math.floor(Math.random() * (maxRm - minRm + 1));
+    const puzzle = generateRawPuzzle(removeTarget);
+    const level = classifyPuzzle(puzzle);
+
+    if (level === targetDiff) {
+      return { puzzle, level };
+    }
+
+    // Track closest match
+    const dist = Math.abs(LEVEL_ORDER[level] - LEVEL_ORDER[targetDiff]);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestPuzzle = { puzzle, level };
+    }
+  }
+
+  // Return best match if exact not found
+  return bestPuzzle || { puzzle: generateRawPuzzle(46), level: 'medium' };
 }
 
 // ── Init Candidates ──
@@ -1681,17 +1776,35 @@ function newGame() {
   stopAuto();
   bifurcationStack = [];
   const diff = document.getElementById('difficulty').value;
-  board = generatePuzzle(diff);
-  given = board.map(v => v !== 0);
-  initCandidates();
-  steps = 0;
+  const btn = document.querySelector('button.primary');
+  btn.disabled = true;
+  btn.textContent = 'generating...';
   document.getElementById('log').innerHTML = '';
   document.getElementById('logCount').textContent = '0 steps';
   resetTechCounts();
-  render(null);
-  updateStats('-');
-  document.getElementById('statTechnique').textContent = '-';
-  addLog({ technique: 'Start', cssClass: 't-hidden-single', desc: `${diff.toUpperCase()} puzzle — ${board.filter(v => v !== 0).length} givens` });
+
+  // Use setTimeout to let UI update before heavy computation
+  setTimeout(() => {
+    const t0 = performance.now();
+    const result = generatePuzzle(diff);
+    const elapsed = Math.round(performance.now() - t0);
+
+    board = result.puzzle;
+    given = board.map(v => v !== 0);
+    initCandidates();
+    steps = 0;
+    render(null);
+    updateStats('-');
+    document.getElementById('statTechnique').textContent = '-';
+
+    const givens = board.filter(v => v !== 0).length;
+    const matchNote = result.level === diff ? '' : ` (closest: ${result.level.toUpperCase()})`;
+    addLog({ technique: 'Start', cssClass: 't-hidden-single',
+      desc: `${diff.toUpperCase()}${matchNote} — ${givens} givens, ${elapsed}ms` });
+
+    btn.disabled = false;
+    btn.textContent = '랜덤 생성';
+  }, 20);
 }
 
 function resetPuzzle() {
