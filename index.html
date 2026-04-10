@@ -109,15 +109,15 @@
     gap: 1px;
     background: #475569;
     border: 3px solid #94a3b8;
-    width: min(calc(100vh - 40px), 740px);
-    height: min(calc(100vh - 40px), 740px);
+    width: min(calc(100vh - 32px), 1040px);
+    height: min(calc(100vh - 32px), 1040px);
   }
   .cell {
     background: #1e293b;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 36px;
+    font-size: 42px;
     font-weight: 700;
     position: relative;
     cursor: default;
@@ -148,7 +148,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 16px;
     color: #64748b;
     transition: color 0.3s, font-weight 0.3s;
   }
@@ -160,7 +160,7 @@
     background: #334155;
     border-radius: 3px;
     overflow: hidden;
-    width: min(calc(100vh - 40px), 740px);
+    width: min(calc(100vh - 32px), 1040px);
   }
   .progress-fill {
     height: 100%;
@@ -325,156 +325,132 @@
 
     <div class="tech-card" data-tech="naked-single" onclick="toggleTech(this)">
       <div class="tech-header">
-        <span class="tech-name" style="color:#4ade80">Naked Single (벌거벗은 싱글)</span>
+        <span class="tech-name" style="color:#4ade80">Naked Single</span>
         <span class="tech-difficulty beginner">입문</span>
       </div>
       <div class="tech-desc">
-        한 칸에 <b>후보가 1개만</b> 남은 경우. 같은 행/열/박스에 다른 숫자가 모두 있어서 가능한 수가 하나뿐이다. 가장 기본적인 기법으로, 남은 유일한 후보를 바로 채운다.
-        <br><br>
-        A cell has only <b>one candidate</b> remaining. All other numbers are already present in its row, column, or box.
+        <b>후보가 1개만 남은 칸.</b> 같은 행/열/박스에 나머지 숫자가 다 있어서 넣을 수 있는 게 딱 하나뿐인 상황. 보이면 바로 채우면 된다.
       </div>
       <div class="tech-count">사용: <span id="count-naked-single">0</span>회</div>
     </div>
 
     <div class="tech-card" data-tech="hidden-single" onclick="toggleTech(this)">
       <div class="tech-header">
-        <span class="tech-name" style="color:#38bdf8">Hidden Single (숨은 싱글)</span>
+        <span class="tech-name" style="color:#38bdf8">Hidden Single</span>
         <span class="tech-difficulty beginner">입문</span>
       </div>
       <div class="tech-desc">
-        행/열/박스 안에서 특정 숫자가 <b>딱 한 칸에만</b> 들어갈 수 있는 경우. 그 칸에 다른 후보가 여러 개 있더라도, 이 숫자는 여기밖에 갈 곳이 없다.
-        <br><br>
-        Within a row, column, or box, a number can only go in <b>one cell</b>. This number has no other valid position in that unit.
+        <b>이 숫자가 들어갈 곳이 여기밖에 없는 경우.</b> 칸 자체에는 후보가 여러 개지만, 행/열/박스 전체를 보면 이 숫자를 놓을 수 있는 위치가 딱 하나다.
       </div>
       <div class="tech-count">사용: <span id="count-hidden-single">0</span>회</div>
     </div>
 
     <div class="tech-card" data-tech="naked-pair" onclick="toggleTech(this)">
       <div class="tech-header">
-        <span class="tech-name" style="color:#fb923c">Naked Pair (벌거벗은 쌍)</span>
+        <span class="tech-name" style="color:#fb923c">Naked Pair</span>
         <span class="tech-difficulty intermediate">중급</span>
       </div>
       <div class="tech-desc">
-        같은 유닛(행/열/박스)에서 두 칸이 <b>똑같은 2개의 후보</b>만 갖고 있는 경우. 이 두 숫자는 반드시 이 두 칸에 들어가므로, 같은 유닛의 나머지 칸에서 이 후보들을 제거할 수 있다.
-        <br><br>
-        Two cells in the same unit share the exact same <b>two candidates</b>. They can be eliminated from all other cells in that unit.
+        <b>같은 영역에서 두 칸이 동일한 후보 2개만 갖는 경우.</b> 이 두 숫자는 무조건 이 두 칸에 들어가니까, 같은 영역의 다른 칸에서 해당 후보를 지울 수 있다.
       </div>
       <div class="tech-count">사용: <span id="count-naked-pair">0</span>회</div>
     </div>
 
     <div class="tech-card" data-tech="hidden-pair" onclick="toggleTech(this)">
       <div class="tech-header">
-        <span class="tech-name" style="color:#a78bfa">Hidden Pair (숨은 쌍)</span>
+        <span class="tech-name" style="color:#a78bfa">Hidden Pair</span>
         <span class="tech-difficulty intermediate">중급</span>
       </div>
       <div class="tech-desc">
-        유닛 안에서 두 숫자가 <b>같은 두 칸에만</b> 후보로 존재하는 경우. 이 두 칸의 다른 후보들을 안전하게 제거하여 쌍만 남길 수 있다.
-        <br><br>
-        Two numbers appear as candidates in <b>only the same two cells</b> within a unit. Other candidates in those cells can be removed.
+        <b>두 숫자가 영역 내에서 같은 두 칸에만 존재.</b> 이 두 칸에 있는 나머지 후보들은 필요 없으니 제거해서 쌍만 남긴다.
       </div>
       <div class="tech-count">사용: <span id="count-hidden-pair">0</span>회</div>
     </div>
 
     <div class="tech-card" data-tech="pointing-pair" onclick="toggleTech(this)">
       <div class="tech-header">
-        <span class="tech-name" style="color:#f472b6">Pointing Pair (가리키는 쌍)</span>
+        <span class="tech-name" style="color:#f472b6">Pointing Pair</span>
         <span class="tech-difficulty intermediate">중급</span>
       </div>
       <div class="tech-desc">
-        박스 안에서 특정 후보가 <b>한 행 또는 한 열에만</b> 몰려 있는 경우. 이 숫자는 반드시 그 줄의 박스 안에 들어가므로, 박스 밖의 같은 줄에서 해당 후보를 제거한다.
-        <br><br>
-        Within a box, a candidate is restricted to a <b>single row or column</b>. It can be eliminated from the rest of that row/column outside the box.
+        <b>박스 안에서 특정 후보가 한 줄에만 몰려 있는 경우.</b> 이 숫자는 그 줄의 박스 안쪽에 반드시 들어가므로, 박스 바깥 같은 줄의 후보를 지운다.
       </div>
       <div class="tech-count">사용: <span id="count-pointing-pair">0</span>회</div>
     </div>
 
     <div class="tech-card" data-tech="box-line" onclick="toggleTech(this)">
       <div class="tech-header">
-        <span class="tech-name" style="color:#e879f9">Box/Line Reduction (박스/줄 축소)</span>
+        <span class="tech-name" style="color:#e879f9">Box/Line Reduction</span>
         <span class="tech-difficulty intermediate">중급</span>
       </div>
       <div class="tech-desc">
-        행이나 열에서 특정 후보가 <b>하나의 박스에만</b> 존재하는 경우. Pointing Pair의 반대 방향으로, 같은 박스의 다른 칸에서 해당 후보를 제거한다.
-        <br><br>
-        Within a row or column, a candidate is confined to a <b>single box</b>. It can be eliminated from other cells in the same box.
+        <b>행/열에서 특정 후보가 하나의 박스 안에만 있는 경우.</b> Pointing Pair의 반대 방향. 같은 박스의 다른 칸에서 해당 후보를 지운다.
       </div>
       <div class="tech-count">사용: <span id="count-box-line">0</span>회</div>
     </div>
 
     <div class="tech-card" data-tech="naked-triple" onclick="toggleTech(this)">
       <div class="tech-header">
-        <span class="tech-name" style="color:#f97316">Naked Triple (벌거벗은 삼중)</span>
+        <span class="tech-name" style="color:#f97316">Naked Triple</span>
         <span class="tech-difficulty intermediate">중급</span>
       </div>
       <div class="tech-desc">
-        유닛 안의 세 칸이 합쳐서 <b>3개의 후보만</b> 갖는 경우. Naked Pair의 확장판으로, 이 세 숫자를 유닛의 나머지 칸에서 제거할 수 있다.
-        <br><br>
-        Three cells in a unit collectively contain only <b>three candidates</b>. Those numbers can be eliminated from all other cells in the unit.
+        <b>세 칸이 합쳐서 후보 3개만 갖는 경우.</b> Naked Pair의 확장. 이 세 숫자는 세 칸에 고정이니까 영역 내 나머지 칸에서 제거한다.
       </div>
       <div class="tech-count">사용: <span id="count-naked-triple">0</span>회</div>
     </div>
 
     <div class="tech-card" data-tech="hidden-triple" onclick="toggleTech(this)">
       <div class="tech-header">
-        <span class="tech-name" style="color:#8b5cf6">Hidden Triple (숨은 삼중)</span>
+        <span class="tech-name" style="color:#8b5cf6">Hidden Triple</span>
         <span class="tech-difficulty advanced">고급</span>
       </div>
       <div class="tech-desc">
-        유닛에서 세 숫자가 <b>오직 세 칸에만</b> 후보로 나타나는 경우. 이 세 칸의 다른 후보들을 모두 제거한다.
-        <br><br>
-        Three numbers appear as candidates in <b>only three cells</b> within a unit. All other candidates in those cells can be removed.
+        <b>세 숫자가 영역에서 오직 세 칸에만 나타나는 경우.</b> 그 세 칸의 다른 후보들을 전부 제거한다.
       </div>
       <div class="tech-count">사용: <span id="count-hidden-triple">0</span>회</div>
     </div>
 
     <div class="tech-card" data-tech="x-wing" onclick="toggleTech(this)">
       <div class="tech-header">
-        <span class="tech-name" style="color:#ef4444">X-Wing (엑스윙)</span>
+        <span class="tech-name" style="color:#ef4444">X-Wing</span>
         <span class="tech-difficulty advanced">고급</span>
       </div>
       <div class="tech-desc">
-        한 후보가 <b>두 행에서 각각 정확히 두 칸</b>에만 있고, 그 칸들이 같은 두 열에 정렬된 경우. 사각형의 대각선 꼭짓점에 배치되며, 해당 열의 나머지 칸에서 그 후보를 제거한다. 행/열을 바꿔도 동일하게 적용된다.
-        <br><br>
-        A candidate appears in exactly <b>two cells in each of two rows</b>, aligned in the same columns. It can be eliminated from other cells in those columns.
+        <b>한 후보가 두 행에서 각각 같은 두 열에만 있는 경우.</b> 사각형 꼭짓점 4칸을 형성하며, 대각선 중 하나에 반드시 배치된다. 해당 열의 나머지 칸에서 후보를 제거한다.
       </div>
       <div class="tech-count">사용: <span id="count-x-wing">0</span>회</div>
     </div>
 
     <div class="tech-card" data-tech="xy-wing" onclick="toggleTech(this)">
       <div class="tech-header">
-        <span class="tech-name" style="color:#fbbf24">XY-Wing (XY날개)</span>
+        <span class="tech-name" style="color:#fbbf24">XY-Wing</span>
         <span class="tech-difficulty advanced">고급</span>
       </div>
       <div class="tech-desc">
-        세 칸이 체인을 형성: <b>피벗(XY)</b>, <b>날개1(XZ)</b>, <b>날개2(YZ)</b>. 피벗이 두 날개를 모두 볼 수 있다. 피벗이 어떤 값을 갖든 Z는 두 날개가 동시에 보는 칸에서 제거된다.
-        <br><br>
-        Three cells: <b>pivot(XY)</b>, <b>wing1(XZ)</b>, <b>wing2(YZ)</b>. Z is eliminated from cells that see both wings.
+        <b>피벗(XY) + 날개1(XZ) + 날개2(YZ) 세 칸의 체인.</b> 피벗이 X든 Y든, 결국 Z는 두 날개 중 하나에 확정된다. 두 날개가 동시에 보는 칸에서 Z를 제거한다.
       </div>
       <div class="tech-count">사용: <span id="count-xy-wing">0</span>회</div>
     </div>
 
     <div class="tech-card" data-tech="swordfish" onclick="toggleTech(this)">
       <div class="tech-header">
-        <span class="tech-name" style="color:#ff6b6b">Swordfish (소드피시)</span>
+        <span class="tech-name" style="color:#ff6b6b">Swordfish</span>
         <span class="tech-difficulty expert">전문가</span>
       </div>
       <div class="tech-desc">
-        X-Wing의 확장으로 <b>3행 x 3열</b>에 적용. 한 후보가 세 행에서 각각 2~3곳에만 있고, 모두 같은 세 열 안에 있을 때, 그 열의 나머지 칸에서 후보를 제거한다.
-        <br><br>
-        Extension of X-Wing to <b>three rows and three columns</b>. Eliminates that candidate from other cells in those columns.
+        <b>X-Wing을 3행 x 3열로 확장한 패턴.</b> 한 후보가 세 행에서 각각 2~3곳에만 있고, 전부 같은 세 열 안에 있으면 그 열의 나머지 칸에서 제거한다.
       </div>
       <div class="tech-count">사용: <span id="count-swordfish">0</span>회</div>
     </div>
 
     <div class="tech-card" data-tech="bifurcation" onclick="toggleTech(this)">
       <div class="tech-header">
-        <span class="tech-name" style="color:#94a3b8">Bifurcation (가설 검증)</span>
+        <span class="tech-name" style="color:#94a3b8">Bifurcation</span>
         <span class="tech-difficulty expert">전문가</span>
       </div>
       <div class="tech-desc">
-        모든 논리적 기법이 통하지 않을 때, 후보가 가장 적은 칸을 골라 <b>하나를 가정</b>한다. 진행하다 모순이 발견되면 되돌려서 다른 후보를 시도한다. 사람들이 "만약에..."라고 하는 시행착오 방식.
-        <br><br>
-        When all logical techniques fail, <b>guess a value</b> for the cell with fewest candidates. Backtrack if contradiction found.
+        <b>논리만으로 안 풀릴 때 쓰는 가정법.</b> 후보가 가장 적은 칸을 골라 하나를 넣어보고, 모순이 생기면 되돌려서 다른 걸 시도한다. "이게 3이라면..." 하고 따져보는 방식.
       </div>
       <div class="tech-count">사용: <span id="count-bifurcation">0</span>회</div>
     </div>
